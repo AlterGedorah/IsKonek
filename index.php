@@ -22,47 +22,52 @@
                     <h2 class="poppins-regular">IsKonek</h2>
                 </div>
                 <br>
-                <!-- Links -->
-                <div class="links-sidebar d-flex flex-column gap-3">
-                    <ul class="nav justify-content-center flex-column d-flex">
-                        <span class="sidebar-span poppins-regular">MAIN</span>
-                        <li class="nav-item nav-pills">
-                            <a class="nav-link active" href="#" aria-current="page">Subject Dashboard</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">Announcements</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">Forums</a>
-                        </li>
-                    </ul>
-                    <ul class="nav justify-content-center flex-column d-flex">
-                        <span class="sidebar-span poppins-regular">PROJECT</span>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">Kanban Board</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">Campus Calendar</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">File Repo</a>
-                        </li>
-                    </ul>
-                </div>
-                <div class="d-flex flex-row  profile-sidebar">
-                    <a href="#">
-                        <img src="images/logo.png" alt="">
-                    </a>
-                    <div class="d-flex flex-column gap-1 profile-details-sidebar">
-                        <h5>Name</h5>
-                        <p>Role</p>
-                        <p>Section</p>
+                <div class="d-flex flex-column ">
+                    <!-- Links -->
+                    <div class="links-sidebar d-flex flex-column gap-3 flex-grow-1">
+                        <ul class="nav justify-content-center flex-column d-flex">
+                            <span class="sidebar-span poppins-regular">MAIN</span>
+                            <li class="nav-item nav-pills">
+                                <a class="nav-link active" href="#" aria-current="page">Subject Dashboard</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#">Announcements</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#">Forums</a>
+                            </li>
+                        </ul>
+                        <ul class="nav justify-content-center flex-column d-flex">
+                            <span class="sidebar-span poppins-regular">PROJECT</span>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#">Kanban Board</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#">Campus Calendar</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#">File Repo</a>
+                            </li>
+                        </ul>
+                    </div>
+                    <!-- Profile -->
+                    <div class="d-flex flex-row gap-2 align-items-center mb-2 profile-sidebar">
+                        <a href="#">
+                            <img src="images/logo.png" alt="">
+                        </a>
+                        <div class="d-flex flex-column gap-0 flex-grow-1 profile-details-sidebar">
+                            <!-- Placeholders -->
+                            <h5>Name</h5>
+                            <p>Role</p>
+                            <p>Section</p>
+                        </div>
                     </div>
                 </div>
             </aside>
             <main class="col px-0">
                 <nav class="navbar navbar-expand-md navbar-light bg-light sticky-top">
                     <div class="container d-flex flex-row-reverse">
+                        <!-- Search -->
                         <form class="d-flex my-2 my-lg-0">
                             <input class="form-control me-sm-2 search-input" type="text" placeholder="Search" />
                             <button class="btn btn-outline-success my-2 my-sm-0" type="submit">
