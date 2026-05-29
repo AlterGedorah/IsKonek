@@ -4,6 +4,7 @@
 }
 .nav-link{
   color: black;
+  font-size: small;
 }
 
 nav{
@@ -19,8 +20,14 @@ aside{
   height: 100vh;
   background-color: #F7F8F7;
 }
+h1{
+  font-family: "Poppins", sans-serif;
+  font-weight: 700;
+  font-style: normal;
+}
 .sidebar-span{
   color: #C5C7C6;
+  font-size: small;
 }
 .brand-side{
   border-bottom-style: solid;
@@ -34,6 +41,7 @@ p {
   position: absolute;
   bottom: 0;
 }
+
 .poppins-thin {
   font-family: "Poppins", sans-serif;
   font-weight: 100;

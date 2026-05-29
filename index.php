@@ -8,21 +8,22 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
     <link rel="stylesheet" href="styles/index.css">
+    <link rel="icon" href="images/Icon.png">
 </head>
 
 <body>
     <div class="container-fluid">
         <div class="row">
-            <aside class="col-2 col-md-3 px-4">
+            <aside class="col-2 px-3">
                 <!-- Brand -->
                 .<div class="container-fluid d-flex flex-row justify-content-center align-items-center gap-3">
                     <a class="navbar-brand" href="#">
                         <img src="images/Icon.png" class="img-fluid rounded-top" alt="" />
                     </a>
-                    <h2 class="poppins-regular">IsKonek</h2>
+                    <h4 class="poppins-regular">IsKonek</h4>
                 </div>
                 <br>
-                <div class="d-flex flex-column ">
+                <div class="d-flex flex-column">
                     <!-- Links -->
                     <div class="links-sidebar d-flex flex-column gap-3 flex-grow-1">
                         <ul class="nav justify-content-center flex-column d-flex">
@@ -76,7 +77,59 @@
                         </form>
                     </div>
                 </nav>
+                <!-- main -->
+                <div class="main container mt-4 d-flex flex-column px-4 gap-2">
+                    <div class="header-container">
+                        <div class="mt-1">
+                        <h3 class="poppins-medium">Good Morning, [Name]</h3>
+                    </div>
+                    <span class="poppins-thin">Here's your academic overview for this semester.</span>
+                    </div>
+                    <!-- Dashborad -->
+                    <div class="d-flex row mx-0 gap-2">
+                        <!-- Active Subjects -->
+                        <div class="col px-0">
+                            <div class="card p-2 rounded-4">
+                                <div class="card-body">
+                                    <h6 class="card-title">ACTIVE SUBJECTS</h6>
+                                    <h1 class="card-text">6</h1>
+                                    <small class="poppins-regular">2nd Sem, A.Y. 2024–25</small>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Pending Tasks -->
+                        <div class="col px-0">
+                            <div class="card p-2 rounded-4">
+                                <div class="card-body">
+                                    <h6 class="card-title">PENDING TASKS</h6>
+                                    <h1 class="card-text pend-tasks">3</h1>
+                                    <small class="poppins-regular">3 Due This Week</small>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Upcoming Events -->
+                        <div class="col px-0">
+                            <div class="card p-2 rounded-4">
+                                <div class="card-body">
+                                    <h6 class="card-title">UPCOMING EVENTS</h6>
+                                    <h1 class="card-text upcom-events">2</h1>
+                                    <small class="poppins-regular">Finals start June 2026</small>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Forum Activity  -->
+                        <div class="col px-0">
+                            <div class="card p-2 rounded-4">
+                                <div class="card-body">
+                                    <h6 class="card-title">FORUM ACTIVITY</h6>
+                                    <h1 class="card-text">6</h1>
+                                    <small class="poppins-regular">New posts today</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
+                </div>
             </main>
         </div>
     </div>
