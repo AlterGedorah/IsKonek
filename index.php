@@ -1,141 +1,120 @@
+<?php
+require_once 'includes/config.php';
+require_once 'includes/auth.php';
+
+if (isLoggedIn()) {
+    header('Location: dashboard.php');
+    exit();
+}
+
+$error = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $email    = trim($_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
+
+    if (empty($email) || empty($password)) {
+        $error = 'Please fill in all fields.';
+    } else {
+        $stmt = $conn->prepare("SELECT id, full_name, email, password, role FROM users WHERE email = ?");
+        $stmt->bind_param("s", $email);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        if ($result->num_rows === 1) {
+            $user = $result->fetch_assoc();
+            if (password_verify($password, $user['password'])) {
+                $_SESSION['user_id']   = $user['id'];
+                $_SESSION['full_name'] = $user['full_name'];
+                $_SESSION['email']     = $user['email'];
+                $_SESSION['role']      = $user['role'];
+                header('Location: dashboard.php');
+                exit();
+            } else {
+                $error = 'Invalid email or password.';
+            }
+        } else {
+            $error = 'Invalid email or password.';
+        }
+        $stmt->close();
+    }
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IsKonek</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
-        integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
-    <link rel="stylesheet" href="styles/index.css">
-    <link rel="icon" href="images/Icon.png">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Iskonek – Sign In</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="assets/css/style.css" rel="stylesheet">
 </head>
-
 <body>
-    <div class="container-fluid">
-        <div class="row">
-            <aside class="col-2 px-3">
-                <!-- Brand -->
-                .<div class="container-fluid d-flex flex-row justify-content-center align-items-center gap-3">
-                    <a class="navbar-brand" href="#">
-                        <img src="images/Icon.png" class="img-fluid rounded-top" alt="" />
-                    </a>
-                    <h4 class="poppins-regular">IsKonek</h4>
-                </div>
-                <br>
-                <div class="d-flex flex-column">
-                    <!-- Links -->
-                    <div class="links-sidebar d-flex flex-column gap-3 flex-grow-1">
-                        <ul class="nav justify-content-center flex-column d-flex">
-                            <span class="sidebar-span poppins-regular">MAIN</span>
-                            <li class="nav-item nav-pills">
-                                <a class="nav-link active" href="#" aria-current="page">Subject Dashboard</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="#">Announcements</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="#">Forums</a>
-                            </li>
-                        </ul>
-                        <ul class="nav justify-content-center flex-column d-flex">
-                            <span class="sidebar-span poppins-regular">PROJECT</span>
-                            <li class="nav-item">
-                                <a class="nav-link" href="#">Kanban Board</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="#">Campus Calendar</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="#">File Repo</a>
-                            </li>
-                        </ul>
-                    </div>
-                    <!-- Profile -->
-                    <div class="d-flex flex-row gap-2 align-items-center mb-2 profile-sidebar">
-                        <a href="#">
-                            <img src="images/logo.png" alt="">
-                        </a>
-                        <div class="d-flex flex-column gap-0 flex-grow-1 profile-details-sidebar">
-                            <!-- Placeholders -->
-                            <h5>Name</h5>
-                            <p>Role</p>
-                            <p>Section</p>
-                        </div>
-                    </div>
-                </div>
-            </aside>
-            <main class="col px-0">
-                <nav class="navbar navbar-expand-md navbar-light bg-light sticky-top">
-                    <div class="container d-flex flex-row-reverse">
-                        <!-- Search -->
-                        <form class="d-flex my-2 my-lg-0">
-                            <input class="form-control me-sm-2 search-input" type="text" placeholder="Search" />
-                            <button class="btn btn-outline-success my-2 my-sm-0" type="submit">
-                                Search
-                            </button>
-                        </form>
-                    </div>
-                </nav>
-                <!-- main -->
-                <div class="main container mt-4 d-flex flex-column px-4 gap-2">
-                    <div class="header-container">
-                        <div class="mt-1">
-                        <h3 class="poppins-medium">Good Morning, [Name]</h3>
-                    </div>
-                    <span class="poppins-thin">Here's your academic overview for this semester.</span>
-                    </div>
-                    <!-- Dashborad -->
-                    <div class="d-flex row mx-0 gap-2">
-                        <!-- Active Subjects -->
-                        <div class="col px-0">
-                            <div class="card p-2 rounded-4">
-                                <div class="card-body">
-                                    <h6 class="card-title">ACTIVE SUBJECTS</h6>
-                                    <h1 class="card-text">6</h1>
-                                    <small class="poppins-regular">2nd Sem, A.Y. 2024–25</small>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- Pending Tasks -->
-                        <div class="col px-0">
-                            <div class="card p-2 rounded-4">
-                                <div class="card-body">
-                                    <h6 class="card-title">PENDING TASKS</h6>
-                                    <h1 class="card-text pend-tasks">3</h1>
-                                    <small class="poppins-regular">3 Due This Week</small>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- Upcoming Events -->
-                        <div class="col px-0">
-                            <div class="card p-2 rounded-4">
-                                <div class="card-body">
-                                    <h6 class="card-title">UPCOMING EVENTS</h6>
-                                    <h1 class="card-text upcom-events">2</h1>
-                                    <small class="poppins-regular">Finals start June 2026</small>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- Forum Activity  -->
-                        <div class="col px-0">
-                            <div class="card p-2 rounded-4">
-                                <div class="card-body">
-                                    <h6 class="card-title">FORUM ACTIVITY</h6>
-                                    <h1 class="card-text">6</h1>
-                                    <small class="poppins-regular">New posts today</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-            </main>
-        </div>
+<div class="login-wrapper">
+  <div class="login-card">
+    <!-- Logo -->
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <div class="login-logo d-flex align-items-center justify-content-center">
+        <span class="fw-bold fs-4" style="font-family:'Poppins',sans-serif;">IK</span>
+      </div>
+      <div>
+        <h5 class="mb-0 fw-medium" style="font-family:'Poppins',sans-serif;">Iskonek</h5>
+        <p class="mb-0 text-muted" style="font-size:13px;">Student Portal</p>
+      </div>
     </div>
-</body>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
-    integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
-    crossorigin="anonymous"></script>
 
+    <h4 class="fw-medium mb-1" style="font-family:'Poppins',sans-serif;">Welcome back!</h4>
+    <p class="text-muted mb-4" style="font-size:14px;">Sign in to your account to continue.</p>
+
+    <?php if ($error): ?>
+      <div class="alert-error mb-3"><i class="bi bi-exclamation-circle me-1"></i><?= htmlspecialchars($error) ?></div>
+    <?php endif; ?>
+
+    <form method="POST" action="">
+      <div class="mb-3">
+        <label class="form-label small fw-medium">Email address</label>
+        <input type="email" name="email" class="form-control"
+               placeholder="student@school.edu.ph"
+               value="<?= htmlspecialchars($_POST['email'] ?? '') ?>" required>
+      </div>
+      <div class="mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <label class="form-label small fw-medium mb-0">Password</label>
+          <a href="forgot_password.php" class="small text-decoration-none" style="color:var(--accent-green);">Forgot password?</a>
+        </div>
+        <div class="input-group">
+          <input type="password" name="password" class="form-control" id="passwordInput" placeholder="••••••••" required>
+          <button class="btn btn-outline-secondary" type="button" id="togglePassword"
+                  style="border-color:var(--border-color);border-radius:0 10px 10px 0;">
+            <i class="bi bi-eye" id="eyeIcon"></i>
+          </button>
+        </div>
+      </div>
+      <button type="submit" class="btn-login">Sign In</button>
+    </form>
+
+    <p class="text-center text-muted mt-4 mb-0" style="font-size:13px;">
+      Don't have an account? <a href="register.php" class="text-decoration-none fw-medium" style="color:var(--accent-green);">Register</a>
+    </p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  document.getElementById('togglePassword').addEventListener('click', function () {
+    const inp  = document.getElementById('passwordInput');
+    const icon = document.getElementById('eyeIcon');
+    if (inp.type === 'password') {
+      inp.type = 'text';
+      icon.className = 'bi bi-eye-slash';
+    } else {
+      inp.type = 'password';
+      icon.className = 'bi bi-eye';
+    }
+  });
+</script>
+</body>
 </html>
