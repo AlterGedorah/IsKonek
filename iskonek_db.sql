@@ -93,6 +93,22 @@ CREATE TABLE IF NOT EXISTS tasks (
     FOREIGN KEY (user_id)    REFERENCES users(id)    ON DELETE CASCADE
 );
 
+-- Kanban board tasks
+CREATE TABLE IF NOT EXISTS kanban_tasks (
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    user_id     INT NOT NULL,
+    title       VARCHAR(120) NOT NULL,
+    subject     VARCHAR(80) NOT NULL DEFAULT 'General',
+    priority    ENUM('low', 'medium', 'high') NOT NULL DEFAULT 'medium',
+    status      ENUM('todo', 'progress', 'review', 'done') NOT NULL DEFAULT 'todo',
+    due_date    DATE DEFAULT NULL,
+    sort_order  INT NOT NULL DEFAULT 0,
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_kanban_user_status (user_id, status),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 -- Events (campus calendar)
 CREATE TABLE IF NOT EXISTS events (
     id          INT AUTO_INCREMENT PRIMARY KEY,

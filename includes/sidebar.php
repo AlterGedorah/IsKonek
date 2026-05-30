@@ -1,5 +1,6 @@
 <?php
 $current_page = basename($_SERVER['PHP_SELF']);
+
 ?>
 <div class="sidebar d-flex flex-column" id="sidebar">
     <!-- Logo -->
@@ -28,14 +29,14 @@ $current_page = basename($_SERVER['PHP_SELF']);
                 <a href="announcements.php" class="nav-link sidebar-link <?= $current_page === 'announcements.php' ? 'active' : '' ?>">
                     <i class="bi bi-megaphone-fill me-2"></i>
                     Announcements
-                    <span class="badge bg-danger rounded-pill ms-auto">3</span>
+                    <span class="badge bg-danger rounded-pill ms-auto"></span>
                 </a>
-            </li>
+            </li>   
             <li class="nav-item">
                 <a href="forums.php" class="nav-link sidebar-link <?= $current_page === 'forums.php' ? 'active' : '' ?>">
                     <i class="bi bi-chat-dots-fill me-2"></i>
                     Forums
-                    <span class="badge bg-danger rounded-pill ms-auto">2</span>
+                    <span class="badge bg-danger rounded-pill ms-auto"></span>
                 </a>
             </li>
         </ul>
@@ -44,10 +45,12 @@ $current_page = basename($_SERVER['PHP_SELF']);
         <p class="nav-section-label mt-3">PROJECT</p>
         <ul class="nav flex-column">
             <li class="nav-item">
-                <a href="kanban.php" class="nav-link sidebar-link <?= $current_page === 'kanban.php' ? 'active' : '' ?>">
+                <a href="pages/kanban.php" class="nav-link sidebar-link <?= $current_page === 'kanban.php' ? 'active' : '' ?>">
                     <i class="bi bi-kanban-fill me-2"></i>
                     Kanban Board
+                    <span class="badge bg-danger rounded-pill ms-auto"></span>
                 </a>
+                
             </li>
             <li class="nav-item">
                 <a href="calendar.php" class="nav-link sidebar-link <?= $current_page === 'calendar.php' ? 'active' : '' ?>">
