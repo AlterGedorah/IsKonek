@@ -9,31 +9,32 @@ $first_name = explode(' ', $user_name)[0];
 
 $hour = (int) date('H');
 $greeting = $hour < 12 ? 'Good Morning' : ($hour < 17 ? 'Good Afternoon' : 'Good Evening');
+// Implement it to get it from database
 
 /* Active subjects */
-$subjects = [
-    ['code' => 'ITEC 106', 'name' => 'Information Assurance & Security',   'instructor' => 'Prof. Dela Cruz',   'color' => '#33b77a', 'units' => 3],
-    ['code' => 'ITEC 107', 'name' => 'Systems Integration & Architecture', 'instructor' => 'Prof. Reyes',        'color' => '#4a90d9', 'units' => 3],
-    ['code' => 'ITEC 108', 'name' => 'Capstone Project 1',                 'instructor' => 'Prof. Santos',       'color' => '#d23c3c', 'units' => 6],
-    ['code' => 'CC 105',   'name' => 'Methods of Research',                'instructor' => 'Prof. Garcia',       'color' => '#f5a623', 'units' => 3],
-    ['code' => 'GE 108',   'name' => 'Contemporary World',                 'instructor' => 'Prof. Villanueva',   'color' => '#9b59b6', 'units' => 3],
-    ['code' => 'PE 4',     'name' => 'Physical Education 4',               'instructor' => 'Prof. Mendoza',      'color' => '#1abc9c', 'units' => 2],
-];
+// $subjects = [
+//     ['code' => 'ITEC 106', 'name' => 'Information Assurance & Security',   'instructor' => 'Prof. Dela Cruz',   'color' => '#33b77a', 'units' => 3],
+//     ['code' => 'ITEC 107', 'name' => 'Systems Integration & Architecture', 'instructor' => 'Prof. Reyes',        'color' => '#4a90d9', 'units' => 3],
+//     ['code' => 'ITEC 108', 'name' => 'Capstone Project 1',                 'instructor' => 'Prof. Santos',       'color' => '#d23c3c', 'units' => 6],
+//     ['code' => 'CC 105',   'name' => 'Methods of Research',                'instructor' => 'Prof. Garcia',       'color' => '#f5a623', 'units' => 3],
+//     ['code' => 'GE 108',   'name' => 'Contemporary World',                 'instructor' => 'Prof. Villanueva',   'color' => '#9b59b6', 'units' => 3],
+//     ['code' => 'PE 4',     'name' => 'Physical Education 4',               'instructor' => 'Prof. Mendoza',      'color' => '#1abc9c', 'units' => 2],
+// ];
 
 /* Stats */
-$stats = [
-    ['label' => 'ACTIVE SUBJECTS',  'value' => count($subjects), 'sub' => '2nd Sem, A.Y. 2024–25', 'color' => 'green'],
-    ['label' => 'PENDING TASKS',    'value' => 3,                'sub' => '3 due this week',        'color' => 'red'],
-    ['label' => 'UPCOMING EVENTS',  'value' => 2,                'sub' => 'Finals start June 2026', 'color' => 'green'],
-    ['label' => 'FORUM ACTIVITY',   'value' => 6,                'sub' => 'New posts today',        'color' => 'green'],
-];
+// $stats = [
+//     ['label' => 'ACTIVE SUBJECTS',  'value' => count($subjects), 'sub' => '2nd Sem, A.Y. 2024–25', 'color' => 'green'],
+//     ['label' => 'PENDING TASKS',    'value' => 3,                'sub' => '3 due this week',        'color' => 'red'],
+//     ['label' => 'UPCOMING EVENTS',  'value' => 2,                'sub' => 'Finals start June 2026', 'color' => 'green'],
+//     ['label' => 'FORUM ACTIVITY',   'value' => 6,                'sub' => 'New posts today',        'color' => 'green'],
+// ];
 
 /* Recent announcements */
-$announcements = [
-    ['subject' => 'ITEC 108', 'title' => 'Capstone submission deadline extended', 'time' => '2 hrs ago',  'color' => '#d23c3c'],
-    ['subject' => 'ITEC 106', 'title' => 'Quiz 3 scheduled for next Wednesday',   'time' => '5 hrs ago',  'color' => '#33b77a'],
-    ['subject' => 'CC 105',   'title' => 'Research proposal feedback released',   'time' => 'Yesterday',  'color' => '#f5a623'],
-];
+// $announcements = [
+//     ['subject' => 'ITEC 108', 'title' => 'Capstone submission deadline extended', 'time' => '2 hrs ago',  'color' => '#d23c3c'],
+//     ['subject' => 'ITEC 106', 'title' => 'Quiz 3 scheduled for next Wednesday',   'time' => '5 hrs ago',  'color' => '#33b77a'],
+//     ['subject' => 'CC 105',   'title' => 'Research proposal feedback released',   'time' => 'Yesterday',  'color' => '#f5a623'],
+// ];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -150,7 +151,7 @@ $announcements = [
               <a href="forums.php" class="btn btn-outline-secondary text-start d-flex align-items-center gap-2" style="border-radius:10px;border-color:var(--border-color);font-size:14px;">
                 <i class="bi bi-chat-dots-fill" style="color:var(--accent-green);"></i> Go to Forums
               </a>
-              <a href="kanban.php" class="btn btn-outline-secondary text-start d-flex align-items-center gap-2" style="border-radius:10px;border-color:var(--border-color);font-size:14px;">
+              <a href="pages/kanban.php" class="btn btn-outline-secondary text-start d-flex align-items-center gap-2" style="border-radius:10px;border-color:var(--border-color);font-size:14px;">
                 <i class="bi bi-kanban-fill" style="color:#4a90d9;"></i> Open Kanban Board
               </a>
               <a href="calendar.php" class="btn btn-outline-secondary text-start d-flex align-items-center gap-2" style="border-radius:10px;border-color:var(--border-color);font-size:14px;">
