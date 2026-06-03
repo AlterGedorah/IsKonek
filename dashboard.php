@@ -4,7 +4,7 @@ require_once 'includes/auth.php';
 requireLogin();
 
 /* ── Mock / DB data ── */
-$user_name = $_SESSION['full_name'] ?? 'Ryan Pol Malabanan';
+$user_name = $_SESSION['full_name'] ?? 'Student';
 $first_name = explode(' ', $user_name)[0];
 
 $hour = (int) date('H');
