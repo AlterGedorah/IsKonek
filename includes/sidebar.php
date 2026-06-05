@@ -75,6 +75,20 @@ $current_page = basename($_SERVER['PHP_SELF']);
                     Member Dictionary
                 </a>
             </li>
+            <?php if (strtolower($_SESSION['role'] ?? '') === 'admin'): ?>
+            <li class="nav-item">
+                <a href="manage_subjects.php" class="nav-link sidebar-link <?= $current_page === 'manage_subjects.php' ? 'active' : '' ?>">
+                    <i class="bi bi-journal-bookmark-fill me-2"></i>
+                    Manage Subjects
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="manage_users.php" class="nav-link sidebar-link <?= $current_page === 'manage_users.php' ? 'active' : '' ?>">
+                    <i class="bi bi-person-gear me-2"></i>
+                    Manage Users
+                </a>
+            </li>
+            <?php endif; ?>
             <li class="nav-item">
                 <a href="settings.php" class="nav-link sidebar-link <?= $current_page === 'settings.php' ? 'active' : '' ?>">
                     <i class="bi bi-gear-fill me-2"></i>
