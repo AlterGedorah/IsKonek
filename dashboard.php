@@ -10,6 +10,8 @@ $first_name = explode(' ', $user_name)[0];
 $hour = (int) date('H');
 $greeting = $hour < 12 ? 'Good Morning' : ($hour < 17 ? 'Good Afternoon' : 'Good Evening');
 // Implement it to get it from database
+$subjects_query = $conn->query("SELECT * FROM subjects ORDER BY code");
+$subjects = $subjects_query->fetch_all(MYSQLI_ASSOC);
 ?>
 <!DOCTYPE html>
 <html lang="en">
