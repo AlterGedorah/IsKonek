@@ -28,7 +28,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($password !== $confirm_pass) {
         $error = 'Passwords do not match.';
     } else {
-        /* Check duplicate email */
         $check = $conn->prepare("SELECT id FROM users WHERE email = ?");
         $check->bind_param("s", $email);
         $check->execute();
@@ -37,9 +36,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $hashed   = password_hash($password, PASSWORD_BCRYPT);
             $role_str = 'Student - ' . $course . ' ' . $year_section;
+            $section  = $course . ' ' . $year_section;
 
-            $stmt = $conn->prepare("INSERT INTO users (full_name, email, student_id, role, password, created_at) VALUES (?,?,?,?,?,NOW())");
-            $stmt->bind_param("sssss", $full_name, $email, $student_id, $role_str, $hashed);
+            $stmt = $conn->prepare("INSERT INTO users (full_name, email, student_id, role, section, password, created_at) VALUES (?,?,?,?,?,?,NOW())");
+            $stmt->bind_param("ssssss", $full_name, $email, $student_id, $role_str, $section, $hashed);
 
             if ($stmt->execute()) {
                 $success = 'Registration successful! You can now sign in.';
@@ -67,7 +67,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
 <div class="login-wrapper">
   <div class="login-card" style="max-width:480px;">
-    <!-- Logo -->
     <div class="d-flex align-items-center gap-3 mb-4">
       <div class="login-logo d-flex align-items-center justify-content-center">
         <span class="fw-bold fs-4" style="font-family:'Poppins',sans-serif;">IK</span>

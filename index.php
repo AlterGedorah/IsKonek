@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($email) || empty($password)) {
         $error = 'Please fill in all fields.';
     } else {
-        $stmt = $conn->prepare("SELECT id, full_name, email, password, role FROM users WHERE email = ?");
+        $stmt = $conn->prepare("SELECT id, full_name, email, password, role, section FROM users WHERE email = ?");
         $stmt->bind_param("s", $email);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -28,6 +28,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['full_name'] = $user['full_name'];
                 $_SESSION['email']     = $user['email'];
                 $_SESSION['role']      = $user['role'];
+                $_SESSION['section']   = $user['section'];
+
+                // Auto-enroll in section subjects
+                if (!empty($user['section'])) {
+                    $sec = $conn->prepare("SELECT id FROM sections WHERE name = ?");
+                    $sec->bind_param("s", $user['section']);
+                    $sec->execute();
+                    $sec_row = $sec->get_result()->fetch_assoc();
+                    $sec->close();
+
+                    if ($sec_row) {
+                        $subs = $conn->prepare("SELECT subject_id FROM section_subjects WHERE section_id = ?");
+                        $subs->bind_param("i", $sec_row['id']);
+                        $subs->execute();
+                        $sub_rows = $subs->get_result()->fetch_all(MYSQLI_ASSOC);
+                        $subs->close();
+
+                        $enroll = $conn->prepare("INSERT IGNORE INTO enrollments (user_id, subject_id) VALUES (?,?)");
+                        foreach ($sub_rows as $sub) {
+                            $enroll->bind_param("ii", $user['id'], $sub['subject_id']);
+                            $enroll->execute();
+                        }
+                        $enroll->close();
+                    }
+                }
+
                 header('Location: dashboard.php');
                 exit();
             } else {
@@ -56,7 +82,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
 <div class="login-wrapper">
   <div class="login-card">
-    <!-- Logo -->
     <div class="d-flex align-items-center gap-3 mb-4">
       <div class="login-logo d-flex align-items-center justify-content-center">
         <span class="fw-bold fs-4" style="font-family:'Poppins',sans-serif;">IK</span>

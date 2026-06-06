@@ -83,6 +83,12 @@ $current_page = basename($_SERVER['PHP_SELF']);
                 </a>
             </li>
             <li class="nav-item">
+                <a href="manage_sections.php" class="nav-link sidebar-link <?= $current_page === 'manage_sections.php' ? 'active' : '' ?>">
+                    <i class="bi bi-diagram-3-fill me-2"></i>
+                    Manage Sections
+                </a>
+            </li>
+            <li class="nav-item">
                 <a href="manage_users.php" class="nav-link sidebar-link <?= $current_page === 'manage_users.php' ? 'active' : '' ?>">
                     <i class="bi bi-person-gear me-2"></i>
                     Manage Users
