@@ -10,6 +10,9 @@ $first_name = explode(' ', $user_name)[0];
 $hour = (int) date('H');
 $greeting = $hour < 12 ? 'Good Morning' : ($hour < 17 ? 'Good Afternoon' : 'Good Evening');
 // Implement it to get it from database
+$subjects_query = $conn->query("SELECT * FROM subjects ORDER BY code");
+$subjects = $subjects_query->fetch_all(MYSQLI_ASSOC);
+$stats = [];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -155,7 +158,7 @@ $greeting = $hour < 12 ? 'Good Morning' : ($hour < 17 ? 'Good Afternoon' : 'Good
       </div>
       <div class="modal-body pt-3">
         <div id="enrollError" class="alert-error mb-3" style="display:none;"></div>
-        <form id="enrollForm" method="POST" action="actions/enroll.php">
+        <form id="enrollForm" method="POST" action="actions/enroll_actions.php">
           <div class="mb-3">
             <label class="form-label small fw-medium">Subject Code</label>
             <input type="text" name="subject_code" class="form-control" placeholder="e.g. ITEC 109" required
@@ -215,7 +218,7 @@ document.addEventListener('DOMContentLoaded', function () {
     enrollForm.addEventListener('submit', function (e) {
       e.preventDefault();
       const fd = new FormData(this);
-      fetch('actions/enroll.php', { method: 'POST', body: fd })
+      fetch('actions/enroll_actions.php', { method: 'POST', body: fd })
         .then(r => r.json())
         .then(data => {
           if (data.success) {
