@@ -64,7 +64,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
                 </a>
             </li>
             <li class="nav-item">
-                <a href="files.php" class="nav-link sidebar-link <?= $current_page === 'files.php' ? 'active' : '' ?>">
+                <a href="repository.php" class="nav-link sidebar-link <?= $current_page === 'repository.php' ? 'active' : '' ?>">
                     <i class="bi bi-folder-fill me-2"></i>
                     File Repository
                 </a>
