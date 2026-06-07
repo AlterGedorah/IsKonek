@@ -12,6 +12,7 @@ $greeting = $hour < 12 ? 'Good Morning' : ($hour < 17 ? 'Good Afternoon' : 'Good
 // Implement it to get it from database
 $subjects_query = $conn->query("SELECT * FROM subjects ORDER BY code");
 $subjects = $subjects_query->fetch_all(MYSQLI_ASSOC);
+$stats = [];
 ?>
 <!DOCTYPE html>
 <html lang="en">

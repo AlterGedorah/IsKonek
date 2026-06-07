@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($email) || empty($password)) {
         $error = 'Please fill in all fields.';
     } else {
-        $stmt = $conn->prepare("SELECT id, full_name, email, password, role, section FROM users WHERE email = ?");
+        $stmt = $conn->prepare("SELECT id, full_name, email, password, role,year, section,program FROM users WHERE email = ?");
         $stmt->bind_param("s", $email);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -28,6 +28,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['full_name'] = $user['full_name'];
                 $_SESSION['email']     = $user['email'];
                 $_SESSION['role']      = $user['role'];
+                $_SESSION['program']   = $user['program'];
+                $_SESSION['year']   = $user['year'];
                 $_SESSION['section']   = $user['section'];
 
                 // Auto-enroll in section subjects
