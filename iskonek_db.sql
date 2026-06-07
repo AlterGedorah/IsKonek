@@ -26,7 +26,8 @@ SET time_zone = "+00:00";
 --
 -- Table structure for table `announcements`
 --
-
+CREATE DATABASE iskonek_db;
+USE iskonek_db;
 CREATE TABLE `announcements` (
   `id` int(11) NOT NULL,
   `subject_id` int(11) NOT NULL,
