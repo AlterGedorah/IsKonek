@@ -3,7 +3,7 @@ require_once 'includes/config.php';
 require_once 'includes/auth.php';
 requireLogin();
 
-$is_admin = strtolower($_SESSION['role'] ?? '') === 'admin';
+$is_admin = strtolower($_SESSION['role'] ?? '') === 'sup_admin';
 if (!$is_admin) {
     header('Location: dashboard.php');
     exit();

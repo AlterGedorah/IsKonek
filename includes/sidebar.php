@@ -20,20 +20,23 @@ $current_page = basename($_SERVER['PHP_SELF']);
         <p class="nav-section-label">MAIN</p>
         <ul class="nav flex-column">
             <li class="nav-item">
-                <a href="dashboard.php" class="nav-link sidebar-link <?= $current_page === 'dashboard.php' ? 'active' : '' ?>">
+                <a href="dashboard.php"
+                    class="nav-link sidebar-link <?= $current_page === 'dashboard.php' ? 'active' : '' ?>">
                     <i class="bi bi-grid-1x2-fill me-2"></i>
                     Subject Dashboard
                 </a>
             </li>
             <li class="nav-item">
-                <a href="announcements.php" class="nav-link sidebar-link <?= $current_page === 'announcements.php' ? 'active' : '' ?>">
+                <a href="announcements.php"
+                    class="nav-link sidebar-link <?= $current_page === 'announcements.php' ? 'active' : '' ?>">
                     <i class="bi bi-megaphone-fill me-2"></i>
                     Announcements
                     <span class="badge bg-danger rounded-pill ms-auto"></span>
                 </a>
-            </li>   
+            </li>
             <li class="nav-item">
-                <a href="forums.php" class="nav-link sidebar-link <?= $current_page === 'forums.php' ? 'active' : '' ?>">
+                <a href="forums.php"
+                    class="nav-link sidebar-link <?= $current_page === 'forums.php' ? 'active' : '' ?>">
                     <i class="bi bi-chat-dots-fill me-2"></i>
                     Forums
                     <span class="badge bg-danger rounded-pill ms-auto"></span>
@@ -45,15 +48,17 @@ $current_page = basename($_SERVER['PHP_SELF']);
         <p class="nav-section-label mt-3">PROJECT</p>
         <ul class="nav flex-column">
             <li class="nav-item">
-                <a href="pages/kanban.php" class="nav-link sidebar-link <?= $current_page === 'kanban.php' ? 'active' : '' ?>">
+                <a href="pages/kanban.php"
+                    class="nav-link sidebar-link <?= $current_page === 'kanban.php' ? 'active' : '' ?>">
                     <i class="bi bi-kanban-fill me-2"></i>
                     Kanban Board
                     <span class="badge bg-danger rounded-pill ms-auto"></span>
                 </a>
-                
+
             </li>
             <li class="nav-item">
-                <a href="calendar.php" class="nav-link sidebar-link <?= $current_page === 'calendar.php' ? 'active' : '' ?>">
+                <a href="calendar.php"
+                    class="nav-link sidebar-link <?= $current_page === 'calendar.php' ? 'active' : '' ?>">
                     <i class="bi bi-calendar3 me-2"></i>
                     Campus Calendar
                 </a>
@@ -70,33 +75,40 @@ $current_page = basename($_SERVER['PHP_SELF']);
         <p class="nav-section-label mt-3">ADMIN</p>
         <ul class="nav flex-column">
             <li class="nav-item">
-                <a href="members.php" class="nav-link sidebar-link <?= $current_page === 'members.php' ? 'active' : '' ?>">
+                <a href="members.php"
+                    class="nav-link sidebar-link <?= $current_page === 'members.php' ? 'active' : '' ?>">
                     <i class="bi bi-people-fill me-2"></i>
                     Member Dictionary
                 </a>
             </li>
             <?php if (strtolower($_SESSION['role'] ?? '') === 'admin'): ?>
+                <li class="nav-item">
+                    <a href="manage_subjects.php"
+                        class="nav-link sidebar-link <?= $current_page === 'manage_subjects.php' ? 'active' : '' ?>">
+                        <i class="bi bi-journal-bookmark-fill me-2"></i>
+                        Manage Subjects
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="manage_users.php"
+                        class="nav-link sidebar-link <?= $current_page === 'manage_users.php' ? 'active' : '' ?>">
+                        <i class="bi bi-person-gear me-2"></i>
+                        Manage Users
+                    </a>
+                </li>
+            <?php endif; ?>
+            <?php if (strtolower($_SESSION['role'] ?? '') === 'sup_admin'): ?>
             <li class="nav-item">
-                <a href="manage_subjects.php" class="nav-link sidebar-link <?= $current_page === 'manage_subjects.php' ? 'active' : '' ?>">
-                    <i class="bi bi-journal-bookmark-fill me-2"></i>
-                    Manage Subjects
-                </a>
-            </li>
-            <li class="nav-item">
-                <a href="manage_sections.php" class="nav-link sidebar-link <?= $current_page === 'manage_sections.php' ? 'active' : '' ?>">
-                    <i class="bi bi-diagram-3-fill me-2"></i>
-                    Manage Sections
-                </a>
-            </li>
-            <li class="nav-item">
-                <a href="manage_users.php" class="nav-link sidebar-link <?= $current_page === 'manage_users.php' ? 'active' : '' ?>">
-                    <i class="bi bi-person-gear me-2"></i>
-                    Manage Users
-                </a>
+                    <a href="manage_sections.php"
+                        class="nav-link sidebar-link <?= $current_page === 'manage_sections.php' ? 'active' : '' ?>">
+                        <i class="bi bi-diagram-3-fill me-2"></i>
+                        Manage Sections
+                    </a>
             </li>
             <?php endif; ?>
             <li class="nav-item">
-                <a href="settings.php" class="nav-link sidebar-link <?= $current_page === 'settings.php' ? 'active' : '' ?>">
+                <a href="settings.php"
+                    class="nav-link sidebar-link <?= $current_page === 'settings.php' ? 'active' : '' ?>">
                     <i class="bi bi-gear-fill me-2"></i>
                     Settings
                 </a>
@@ -113,11 +125,22 @@ $current_page = basename($_SERVER['PHP_SELF']);
             </div>
             <div class="flex-grow-1 overflow-hidden">
                 <p class="mb-0 fw-medium text-truncate small" style="font-size:14px;">
-                    <?= isset($_SESSION['full_name']) ? htmlspecialchars($_SESSION['full_name']) : 'Ryan Pol Malabanan' ?>
+                    <?= isset($_SESSION['full_name']) ? htmlspecialchars($_SESSION['full_name']) : '' ?>
                 </p>
-                <p class="mb-0 text-muted" style="font-size:12px;">
-                    <?= isset($_SESSION['role']) ? htmlspecialchars($_SESSION['role']) : 'Student - BSIT 2-1' ?>
-                </p>
+                <div class="d-flex gap-1 flex-row">
+                    <p class="mb-0 text-muted" style="font-size:12px;">
+                        <?= isset($_SESSION['role']) ? htmlspecialchars($_SESSION['role']) : '' ?>
+                    </p>
+                    <p class="mb-0 text-muted" style="font-size:12px;">
+                        <?= isset($_SESSION['program']) ? htmlspecialchars($_SESSION['program']) : '' ?>
+                    </p>
+                    <p class="mb-0 text-muted" style="font-size:12px;">
+                        <?= isset($_SESSION['year']) ? htmlspecialchars($_SESSION['year']) : '' ?>
+                    </p>
+                    <p class="mb-0 text-muted" style="font-size:12px;">
+                        <?= isset($_SESSION['section']) ? htmlspecialchars($_SESSION['section']) : '' ?>
+                    </p>
+                </div>
             </div>
             <a href="logout.php" class="text-muted logout-btn" title="Logout">
                 <i class="bi bi-box-arrow-right"></i>
