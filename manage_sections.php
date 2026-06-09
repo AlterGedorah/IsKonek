@@ -9,11 +9,15 @@ if (!$is_admin) {
     exit();
 }
 
-$sections_query = $conn->query("SELECT * FROM sections ORDER BY name");
+$sections_query = $conn->query("SELECT s.*, u.full_name AS manager_name FROM sections s LEFT JOIN users u ON s.manager_id = u.id ORDER BY s.name");
 $sections = $sections_query->fetch_all(MYSQLI_ASSOC);
 
 $subjects_query = $conn->query("SELECT id, code, name FROM subjects ORDER BY code");
 $all_subjects = $subjects_query->fetch_all(MYSQLI_ASSOC);
+
+// All users for manager dropdown (admins and students)
+$all_users_q = $conn->query("SELECT id, full_name, role FROM users ORDER BY full_name");
+$all_users = $all_users_q->fetch_all(MYSQLI_ASSOC);
 
 // Get subjects per section
 $section_subjects = [];
@@ -202,6 +206,11 @@ while ($row = $ss_query->fetch_assoc()) {
             <div class="section-row">
               <div class="section-info">
                 <div class="section-name"><?= htmlspecialchars($sec['name']) ?> <span class="text-muted fw-normal" style="font-size:12px;">(<?= htmlspecialchars($sec['course']) ?>)</span></div>
+                <?php if ($sec['manager_name']): ?>
+                  <div style="font-size:12px;color:var(--accent-green);margin-top:2px;"><i class="bi bi-person-check-fill me-1"></i>Manager: <?= htmlspecialchars($sec['manager_name']) ?></div>
+                <?php else: ?>
+                  <div style="font-size:12px;color:var(--text-muted);margin-top:2px;"><i class="bi bi-person-dash me-1"></i>No classroom manager</div>
+                <?php endif; ?>
                 <div class="section-subjects-list mt-1">
                   <?php if (empty($sec_subjects)): ?>
                     <span style="font-size:12px;color:var(--text-muted);">No subjects assigned</span>
@@ -216,7 +225,7 @@ while ($row = $ss_query->fetch_assoc()) {
               </div>
               <div class="section-actions">
                 <button class="btn-edit-sec" title="Edit"
-                        onclick='openEditModal(<?= json_encode($sec) ?>, <?= json_encode($sec_subjects) ?>)'>
+                        onclick='openEditModal(<?= json_encode(['id'=>$sec['id'],'name'=>$sec['name'],'course'=>$sec['course'],'manager_id'=>$sec['manager_id']]) ?>, <?= json_encode($sec_subjects) ?>)'>
                   <i class="bi bi-pencil"></i>
                 </button>
                 <button class="btn-delete-sec" title="Delete"
@@ -263,6 +272,17 @@ while ($row = $ss_query->fetch_assoc()) {
                 <option value="ACT">ACT</option>
               </select>
             </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label small fw-medium">Classroom Manager <span class="text-muted">(optional)</span></label>
+            <select name="manager_id" id="field_manager_id" class="form-select"
+                    style="border-radius:10px;border-color:var(--border-color);">
+              <option value="0">— None —</option>
+              <?php foreach ($all_users as $u): ?>
+                <option value="<?= $u['id'] ?>"><?= htmlspecialchars($u['full_name']) ?> <span style="color:#999;">(<?= htmlspecialchars($u['role']) ?>)</span></option>
+              <?php endforeach; ?>
+            </select>
           </div>
 
           <div class="mb-4">
@@ -332,6 +352,7 @@ function openEditModal(sec, subjectIds) {
   document.getElementById('field_section_id').value = sec.id;
   document.getElementById('field_name').value        = sec.name;
   document.getElementById('field_course').value      = sec.course;
+  document.getElementById('field_manager_id').value  = sec.manager_id || 0;
   document.getElementById('sectionError').style.display = 'none';
   document.querySelectorAll('input[name="subjects[]"]').forEach(cb => {
     cb.checked = subjectIds.includes(parseInt(cb.value));

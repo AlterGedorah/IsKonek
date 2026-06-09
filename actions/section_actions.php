@@ -24,7 +24,6 @@ function json_error(string $msg): void {
 }
 
 function syncSubjects(mysqli $conn, int $section_id, array $subject_ids): void {
-    $conn->prepare("DELETE FROM section_subjects WHERE section_id = ?")->execute() || true;
     $del = $conn->prepare("DELETE FROM section_subjects WHERE section_id = ?");
     $del->bind_param("i", $section_id);
     $del->execute();
@@ -41,10 +40,55 @@ function syncSubjects(mysqli $conn, int $section_id, array $subject_ids): void {
     }
 }
 
+// Auto-enroll all users in this section into the section's subjects
+function autoEnrollSectionUsers(mysqli $conn, int $section_id): void {
+    $subj_q = $conn->prepare("SELECT subject_id FROM section_subjects WHERE section_id = ?");
+    $subj_q->bind_param("i", $section_id);
+    $subj_q->execute();
+    $res = $subj_q->get_result();
+    $subject_ids = [];
+    while ($row = $res->fetch_assoc()) {
+        $subject_ids[] = (int)$row['subject_id'];
+    }
+    $subj_q->close();
+
+    if (empty($subject_ids)) return;
+
+    $sec_q = $conn->prepare("SELECT name FROM sections WHERE id = ?");
+    $sec_q->bind_param("i", $section_id);
+    $sec_q->execute();
+    $sec_row = $sec_q->get_result()->fetch_assoc();
+    $sec_q->close();
+    if (!$sec_row) return;
+    $section_name = $sec_row['name'];
+
+    $users_q = $conn->prepare("SELECT id FROM users WHERE section = ?");
+    $users_q->bind_param("s", $section_name);
+    $users_q->execute();
+    $users_res = $users_q->get_result();
+    $user_ids = [];
+    while ($row = $users_res->fetch_assoc()) {
+        $user_ids[] = (int)$row['id'];
+    }
+    $users_q->close();
+
+    if (empty($user_ids)) return;
+
+    $ins = $conn->prepare("INSERT IGNORE INTO enrollments (user_id, subject_id) VALUES (?,?)");
+    foreach ($user_ids as $uid) {
+        foreach ($subject_ids as $sid) {
+            $ins->bind_param("ii", $uid, $sid);
+            $ins->execute();
+        }
+    }
+    $ins->close();
+}
+
 if ($action === 'add_section') {
-    $name    = trim($_POST['name']   ?? '');
-    $course  = trim($_POST['course'] ?? '');
-    $subjects = $_POST['subjects']   ?? [];
+    $name       = trim($_POST['name']        ?? '');
+    $course     = trim($_POST['course']      ?? '');
+    $manager_id = (int)($_POST['manager_id'] ?? 0);
+    $subjects   = $_POST['subjects']         ?? [];
 
     if (!$name || !$course) json_error('Section name and course are required.');
 
@@ -54,21 +98,28 @@ if ($action === 'add_section') {
     if ($check->get_result()->num_rows > 0) json_error('Section already exists.');
     $check->close();
 
-    $stmt = $conn->prepare("INSERT INTO sections (name, course) VALUES (?,?)");
-    $stmt->bind_param("ss", $name, $course);
+    if ($manager_id > 0) {
+        $stmt = $conn->prepare("INSERT INTO sections (name, course, manager_id) VALUES (?,?,?)");
+        $stmt->bind_param("ssi", $name, $course, $manager_id);
+    } else {
+        $stmt = $conn->prepare("INSERT INTO sections (name, course) VALUES (?,?)");
+        $stmt->bind_param("ss", $name, $course);
+    }
     if (!$stmt->execute()) json_error('Failed to add section.');
     $section_id = $conn->insert_id;
     $stmt->close();
 
     syncSubjects($conn, $section_id, $subjects);
+    autoEnrollSectionUsers($conn, $section_id);
     json_success();
 }
 
 if ($action === 'edit_section') {
-    $id      = (int)($_POST['section_id'] ?? 0);
-    $name    = trim($_POST['name']        ?? '');
-    $course  = trim($_POST['course']      ?? '');
-    $subjects = $_POST['subjects']        ?? [];
+    $id         = (int)($_POST['section_id']  ?? 0);
+    $name       = trim($_POST['name']         ?? '');
+    $course     = trim($_POST['course']       ?? '');
+    $manager_id = (int)($_POST['manager_id']  ?? 0);
+    $subjects   = $_POST['subjects']          ?? [];
 
     if (!$id || !$name || !$course) json_error('Section name and course are required.');
 
@@ -78,12 +129,18 @@ if ($action === 'edit_section') {
     if ($check->get_result()->num_rows > 0) json_error('Section name already used.');
     $check->close();
 
-    $stmt = $conn->prepare("UPDATE sections SET name=?, course=? WHERE id=?");
-    $stmt->bind_param("ssi", $name, $course, $id);
+    if ($manager_id > 0) {
+        $stmt = $conn->prepare("UPDATE sections SET name=?, course=?, manager_id=? WHERE id=?");
+        $stmt->bind_param("ssii", $name, $course, $manager_id, $id);
+    } else {
+        $stmt = $conn->prepare("UPDATE sections SET name=?, course=?, manager_id=NULL WHERE id=?");
+        $stmt->bind_param("ssi", $name, $course, $id);
+    }
     if (!$stmt->execute()) json_error('Failed to update section.');
     $stmt->close();
 
     syncSubjects($conn, $id, $subjects);
+    autoEnrollSectionUsers($conn, $id);
     json_success();
 }
 
@@ -96,6 +153,27 @@ if ($action === 'delete_section') {
     if (!$stmt->execute() || $stmt->affected_rows === 0) json_error('Failed to delete section.');
     $stmt->close();
 
+    json_success();
+}
+
+if ($action === 'add_member') {
+    $section_id = (int)($_POST['section_id'] ?? 0);
+    $user_id    = (int)($_POST['user_id']    ?? 0);
+    if (!$section_id || !$user_id) json_error('Invalid section or user.');
+
+    $sec_q = $conn->prepare("SELECT name FROM sections WHERE id = ?");
+    $sec_q->bind_param("i", $section_id);
+    $sec_q->execute();
+    $sec_row = $sec_q->get_result()->fetch_assoc();
+    $sec_q->close();
+    if (!$sec_row) json_error('Section not found.');
+
+    $upd = $conn->prepare("UPDATE users SET section=? WHERE id=?");
+    $upd->bind_param("si", $sec_row['name'], $user_id);
+    if (!$upd->execute()) json_error('Failed to add member.');
+    $upd->close();
+
+    autoEnrollSectionUsers($conn, $section_id);
     json_success();
 }
 
