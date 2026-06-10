@@ -64,7 +64,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
                 </a>
             </li>
             <li class="nav-item">
-                <a href="files.php" class="nav-link sidebar-link <?= $current_page === 'files.php' ? 'active' : '' ?>">
+                <a href="repository.php" class="nav-link sidebar-link <?= $current_page === 'repository.php' ? 'active' : '' ?>">
                     <i class="bi bi-folder-fill me-2"></i>
                     File Repository
                 </a>
@@ -120,8 +120,13 @@ $current_page = basename($_SERVER['PHP_SELF']);
     <div class="sidebar-account px-3 py-3">
         <hr class="sidebar-divider mb-2">
         <div class="d-flex align-items-center gap-2">
-            <div class="avatar-circle d-flex align-items-center justify-content-center">
-                <i class="bi bi-person-fill fs-5"></i>
+            <div class="avatar-circle d-flex align-items-center justify-content-center overflow-hidden">
+                <?php if (!empty($_SESSION['avatar'])): ?>
+                    <img src="<?= htmlspecialchars($_SESSION['avatar']) ?>" alt="Avatar"
+                         style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+                <?php else: ?>
+                    <i class="bi bi-person-fill fs-5"></i>
+                <?php endif; ?>
             </div>
             <div class="flex-grow-1 overflow-hidden">
                 <p class="mb-0 fw-medium text-truncate small" style="font-size:14px;">

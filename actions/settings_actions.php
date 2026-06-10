@@ -51,6 +51,9 @@ if ($action === 'update_profile') {
         $_SESSION['full_name'] = $full_name;
         $_SESSION['email']     = $email;
         $_SESSION['section']   = $section;
+        if ($avatar_path) {
+            $_SESSION['avatar'] = $avatar_path;
+        }
         header('Location: ../settings.php?success=profile&tab=profile');
     } else {
         header('Location: ../settings.php?error=profile&tab=profile');
