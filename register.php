@@ -11,8 +11,8 @@ $error = '';
 $success = '';
 
 // Fetch sections for dropdown
-$sections_q = $conn->query("SELECT id, name, course FROM sections ORDER BY name");
-$all_sections = $sections_q ? $sections_q->fetch_all(MYSQLI_ASSOC) : [];
+// $sections_q = $conn->query("SELECT id, name, course FROM sections ORDER BY name");
+// $all_sections = $sections_q ? $sections_q->fetch_all(MYSQLI_ASSOC) : [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $full_name = trim($_POST['full_name'] ?? '');
@@ -39,61 +39,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($check->get_result()->num_rows > 0) {
       $error = 'An account with this email already exists.';
     } else {
-        // Get section info
-        $section_name = '';
-        $section_course = '';
-        if ($section_id > 0) {
-            $sec_q = $conn->prepare("SELECT name, course FROM sections WHERE id = ?");
-            $sec_q->bind_param("i", $section_id);
-            $sec_q->execute();
-            $sec_row = $sec_q->get_result()->fetch_assoc();
-            $sec_q->close();
-            if ($sec_row) {
-                $section_name   = $sec_row['name'];
-                $section_course = $sec_row['course'];
-            }
+      // Get section info
+      $section_name = '';
+      $section_course = '';
+      if ($section_id > 0) {
+        $sec_q = $conn->prepare("SELECT name, course FROM sections WHERE id = ?");
+        $sec_q->bind_param("i", $section_id);
+        $sec_q->execute();
+        $sec_row = $sec_q->get_result()->fetch_assoc();
+        $sec_q->close();
+        if ($sec_row) {
+          $section_name = $sec_row['name'];
+          $section_course = $sec_row['course'];
         }
+      }
 
-        $role_str = $section_course ? 'Student - ' . $section_course . ' ' . $section_name : 'Student';
+      $role_str = $section_course ? 'Student - ' . $section_course . ' ' . $section_name : 'Student';
 
-        $check = $conn->prepare("SELECT id FROM users WHERE email = ?");
-        $check->bind_param("s", $email);
-        $check->execute();
-        if ($check->get_result()->num_rows > 0) {
-            $error = 'An account with this email already exists.';
+      $check = $conn->prepare("SELECT id FROM users WHERE email = ?");
+      $check->bind_param("s", $email);
+      $check->execute();
+      if ($check->get_result()->num_rows > 0) {
+        $error = 'An account with this email already exists.';
+      } else {
+        $hashed = password_hash($password, PASSWORD_BCRYPT);
+
+        $stmt = $conn->prepare("INSERT INTO users (full_name, email, student_id, year,program, section,role, password, created_at) VALUES (?,?,?,?,?,?,?,?,NOW())");
+        $stmt->bind_param("sssisiss", $full_name, $email, $student_id, $year, $course, $section, $role_str, $hashed);
+
+        if ($stmt->execute()) {
+          $new_user_id = $conn->insert_id;
+          $stmt->close();
+
+          // Auto-enroll into section subjects if section selected
+          if ($section_id > 0) {
+            $subj_q = $conn->prepare("SELECT subject_id FROM section_subjects WHERE section_id = ?");
+            $subj_q->bind_param("i", $section_id);
+            $subj_q->execute();
+            $subj_res = $subj_q->get_result();
+            $enroll = $conn->prepare("INSERT IGNORE INTO enrollments (user_id, subject_id) VALUES (?,?)");
+            while ($row = $subj_res->fetch_assoc()) {
+              $sid = (int) $row['subject_id'];
+              $enroll->bind_param("ii", $new_user_id, $sid);
+              $enroll->execute();
+            }
+            $enroll->close();
+            $subj_q->close();
+          }
+
+          $success = 'Registration successful! You can now sign in.';
         } else {
-            $hashed = password_hash($password, PASSWORD_BCRYPT);
-
-            $stmt = $conn->prepare("INSERT INTO users (full_name, email, student_id, role, section, password, created_at) VALUES (?,?,?,?,?,?,NOW())");
-            $stmt->bind_param("ssssss", $full_name, $email, $student_id, $role_str, $section_name, $hashed);
-
-            if ($stmt->execute()) {
-                $new_user_id = $conn->insert_id;
-                $stmt->close();
-
-                // Auto-enroll into section subjects if section selected
-                if ($section_id > 0) {
-                    $subj_q = $conn->prepare("SELECT subject_id FROM section_subjects WHERE section_id = ?");
-                    $subj_q->bind_param("i", $section_id);
-                    $subj_q->execute();
-                    $subj_res = $subj_q->get_result();
-                    $enroll = $conn->prepare("INSERT IGNORE INTO enrollments (user_id, subject_id) VALUES (?,?)");
-                    while ($row = $subj_res->fetch_assoc()) {
-                        $sid = (int)$row['subject_id'];
-                        $enroll->bind_param("ii", $new_user_id, $sid);
-                        $enroll->execute();
-                    }
-                    $enroll->close();
-                    $subj_q->close();
-                }
-
-                $success = 'Registration successful! You can now sign in.';
-            } else {
-                $error = 'Registration failed. Please try again.';
-                $stmt->close();
-            }
+          $error = 'Registration failed. Please try again.';
+          $stmt->close();
         }
-        $check->close();
+      }
+      $check->close();
     }
     $check->close();
   }
@@ -150,19 +150,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <input type="email" name="email" class="form-control" placeholder="student@school.edu.ph"
               value="<?= htmlspecialchars($_POST['email'] ?? '') ?>" required>
           </div>
-          <div class="col-sm-6">
+          <div class="col-12">
             <label class="form-label small fw-medium">Student ID <span class="text-danger">*</span></label>
             <input type="text" name="student_id" class="form-control" placeholder="2024-XXXXX"
               value="<?= htmlspecialchars($_POST['student_id'] ?? '') ?>" required>
-          </div>
-          <div class="col-sm-6">
-            <label class="form-label small fw-medium">Course</label>
-            <select name="course" class="form-select">
-              <option value="BSIT" <?= ($_POST['course'] ?? '') === 'BSIT' ? 'selected' : '' ?>>BSIT</option>
-              <option value="BSCS" <?= ($_POST['course'] ?? '') === 'BSCS' ? 'selected' : '' ?>>BSCS</option>
-              <option value="BSIS" <?= ($_POST['course'] ?? '') === 'BSIS' ? 'selected' : '' ?>>BSIS</option>
-              <option value="ACT" <?= ($_POST['course'] ?? '') === 'ACT' ? 'selected' : '' ?>>ACT</option>
-            </select>
           </div>
           <div class="col-12">
             <label class="form-label small fw-medium">Year</label>
@@ -202,53 +193,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </div>
     <?php endif; ?>
 
-    <form method="POST" action="">
-      <div class="row g-3">
-        <div class="col-12">
-          <label class="form-label small fw-medium">Full Name <span class="text-danger">*</span></label>
-          <input type="text" name="full_name" class="form-control" placeholder="Juan Dela Cruz"
-                 value="<?= htmlspecialchars($_POST['full_name'] ?? '') ?>" required>
-        </div>
-        <div class="col-12">
-          <label class="form-label small fw-medium">Email Address <span class="text-danger">*</span></label>
-          <input type="email" name="email" class="form-control" placeholder="student@school.edu.ph"
-                 value="<?= htmlspecialchars($_POST['email'] ?? '') ?>" required>
-        </div>
-        <div class="col-12">
-          <label class="form-label small fw-medium">Student ID <span class="text-danger">*</span></label>
-          <input type="text" name="student_id" class="form-control" placeholder="2024-XXXXX"
-                 value="<?= htmlspecialchars($_POST['student_id'] ?? '') ?>" required>
-        </div>
-        <div class="col-12">
-          <label class="form-label small fw-medium">Section</label>
-          <select name="section_id" class="form-select">
-            <option value="0">— No section yet —</option>
-            <?php foreach ($all_sections as $sec): ?>
-              <option value="<?= $sec['id'] ?>"
-                <?= ((int)($_POST['section_id'] ?? 0) === (int)$sec['id']) ? 'selected' : '' ?>>
-                <?= htmlspecialchars($sec['course'] . ' – ' . $sec['name']) ?>
-              </option>
-            <?php endforeach; ?>
-          </select>
-          <div class="form-text" style="font-size:11px;">Selecting a section auto-enrolls you in its subjects.</div>
-        </div>
-        <div class="col-sm-6">
-          <label class="form-label small fw-medium">Password <span class="text-danger">*</span></label>
-          <input type="password" name="password" class="form-control" placeholder="Min 8 characters" required>
-        </div>
-        <div class="col-sm-6">
-          <label class="form-label small fw-medium">Confirm Password <span class="text-danger">*</span></label>
-          <input type="password" name="confirm_password" class="form-control" placeholder="Repeat password" required>
-        </div>
-        <div class="col-12 mt-1">
-          <button type="submit" class="btn-login">Create Account</button>
-        </div>
-      </div>
-    </form>
 
-    <p class="text-center text-muted mt-4 mb-0" style="font-size:13px;">
-      Already have an account? <a href="index.php" class="text-decoration-none fw-medium" style="color:var(--accent-green);">Sign in</a>
-    </p>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
