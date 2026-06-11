@@ -98,6 +98,23 @@ if ($action === 'create_reply') {
     }
 
     $reply_id  = $conn->insert_id;
+
+    // Notify the original post author if not replying to own post
+$post_stmt = $conn->prepare("SELECT user_id, title FROM forum_posts WHERE id = ?");
+$post_stmt->bind_param("i", $post_id);
+$post_stmt->execute();
+$post_row = $post_stmt->get_result()->fetch_assoc();
+$post_stmt->close();
+
+if ($post_row && (int)$post_row['user_id'] !== $user_id) {
+    $post_author_id = (int) $post_row['user_id'];
+    $notif_msg  = "{$_SESSION['full_name']} replied to your post \"{$post_row['title']}\"";
+    $notif_link = "forum_post.php?id={$post_id}";
+    $notif = $conn->prepare("INSERT INTO notifications (user_id, type, message, link) VALUES (?, 'reply', ?, ?)");
+    $notif->bind_param("iss", $post_author_id, $notif_msg, $notif_link);
+    $notif->execute();
+    $notif->close();
+}
     $full_name = $_SESSION['full_name'] ?? 'Student';
     $role      = $_SESSION['role']      ?? 'Student';
 

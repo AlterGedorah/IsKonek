@@ -9,7 +9,7 @@ $user_id = $_SESSION['user_id'];
 $action  = $_POST['action'] ?? '';
 
 function isAdmin(): bool {
-    return strtolower($_SESSION["role"] ?? "") === "admin";
+    return in_array(strtolower($_SESSION["role"] ?? ""), ["admin", "sup_admin"]);
 }
 
 function json_success(array $data = []): void {
@@ -52,6 +52,30 @@ if ($action === 'create_announcement') {
     $new_id = $conn->insert_id;
     $stmt->close();
 
+    // Notify all enrolled users in this subject
+$subj_stmt = $conn->prepare("SELECT code FROM subjects WHERE id = ?");
+$subj_stmt->bind_param("i", $subject_id);
+$subj_stmt->execute();
+$subj_row = $subj_stmt->get_result()->fetch_assoc();
+$subj_stmt->close();
+$subject_code = $subj_row['code'] ?? 'a subject';
+
+$enrolled = $conn->prepare("SELECT user_id FROM enrollments WHERE subject_id = ? AND user_id != ?");
+$enrolled->bind_param("ii", $subject_id, $user_id);
+$enrolled->execute();
+$enrolled_users = $enrolled->get_result()->fetch_all(MYSQLI_ASSOC);
+$enrolled->close();
+
+if (!empty($enrolled_users)) {
+    $notif_msg  = "New announcement in {$subject_code}: \"{$title}\"";
+    $notif_link = "announcements.php";
+    $ins = $conn->prepare("INSERT INTO notifications (user_id, type, message, link) VALUES (?, 'announcement', ?, ?)");
+    foreach ($enrolled_users as $eu) {
+        $ins->bind_param("iss", $eu['user_id'], $notif_msg, $notif_link);
+        $ins->execute();
+    }
+    $ins->close();
+}
     json_success(['announcement_id' => $new_id]);
 }
 
