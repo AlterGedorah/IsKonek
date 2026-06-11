@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost
--- Generation Time: Jun 07, 2026 at 08:26 AM
+-- Generation Time: Jun 11, 2026 at 12:17 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -18,7 +18,7 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Database: `iskonek_db`
+-- Database: `iskonek_db_1`
 --
 
 -- --------------------------------------------------------
@@ -26,8 +26,10 @@ SET time_zone = "+00:00";
 --
 -- Table structure for table `announcements`
 --
-CREATE DATABASE iskonek_db;
-USE iskonek_db;
+DROP DATABASE IF EXISTS `iskonek_db`;
+CREATE DATABASE `iskonek_db`;
+USE `iskonek_db`;
+
 CREATE TABLE `announcements` (
   `id` int(11) NOT NULL,
   `subject_id` int(11) NOT NULL,
@@ -35,7 +37,7 @@ CREATE TABLE `announcements` (
   `body` text DEFAULT NULL,
   `created_by` int(11) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -48,7 +50,7 @@ CREATE TABLE `enrollments` (
   `user_id` int(11) NOT NULL,
   `subject_id` int(11) NOT NULL,
   `enrolled_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -64,7 +66,15 @@ CREATE TABLE `events` (
   `event_time` time DEFAULT NULL,
   `created_by` int(11) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `events`
+--
+
+INSERT INTO `events` (`id`, `title`, `description`, `event_date`, `event_time`, `created_by`, `created_at`) VALUES
+(1, 'Final Examinations', 'Week-long final exams for all subjects.', '2026-06-15', NULL, 1, '2026-06-05 01:44:44'),
+(2, 'Enrollment Period', 'Next semester enrollment opens.', '2026-07-01', NULL, 1, '2026-06-05 01:44:44');
 
 -- --------------------------------------------------------
 
@@ -81,7 +91,7 @@ CREATE TABLE `files` (
   `file_size` int(11) DEFAULT 0,
   `file_type` varchar(80) DEFAULT NULL,
   `uploaded_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -97,7 +107,7 @@ CREATE TABLE `forum_posts` (
   `body` text DEFAULT NULL,
   `views` int(11) DEFAULT 0,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -111,7 +121,7 @@ CREATE TABLE `forum_replies` (
   `user_id` int(11) NOT NULL,
   `body` text NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -130,7 +140,23 @@ CREATE TABLE `kanban_tasks` (
   `sort_order` int(11) NOT NULL DEFAULT 0,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `notifications`
+--
+
+CREATE TABLE `notifications` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `type` enum('announcement','event') NOT NULL,
+  `reference_id` int(11) NOT NULL,
+  `message` varchar(255) NOT NULL,
+  `is_read` tinyint(1) DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -142,15 +168,16 @@ CREATE TABLE `sections` (
   `id` int(11) NOT NULL,
   `name` varchar(40) NOT NULL,
   `course` varchar(20) NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `manager_id` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `sections`
 --
 
-INSERT INTO `sections` (`id`, `name`, `course`, `created_at`) VALUES
-(1, 'BSIT 2-1', 'BSIT', '2026-06-07 01:03:27');
+INSERT INTO `sections` (`id`, `name`, `course`, `created_at`, `manager_id`) VALUES
+(1, 'BSIT 2-1', 'BSIT', '2026-06-06 13:14:21', NULL);
 
 -- --------------------------------------------------------
 
@@ -162,7 +189,7 @@ CREATE TABLE `section_subjects` (
   `id` int(11) NOT NULL,
   `section_id` int(11) NOT NULL,
   `subject_id` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -180,19 +207,21 @@ CREATE TABLE `subjects` (
   `color` varchar(10) DEFAULT '#33b77a',
   `semester` varchar(40) DEFAULT '2nd Sem, A.Y. 2024-25',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `subjects`
 --
 
 INSERT INTO `subjects` (`id`, `code`, `name`, `instructor`, `units`, `enroll_key`, `color`, `semester`, `created_at`) VALUES
-(1, 'ITEC 106', 'Information Assurance & Security', 'Prof. Dela Cruz', 3, 'KEY-106', '#33b77a', '2nd Sem, A.Y. 2024-25', '2026-06-07 01:02:06'),
-(2, 'ITEC 107', 'Systems Integration & Architecture', 'Prof. Reyes', 3, 'KEY-107', '#4a90d9', '2nd Sem, A.Y. 2024-25', '2026-06-07 01:02:06'),
-(3, 'ITEC 108', 'Capstone Project 1', 'Prof. Santos', 6, 'KEY-108', '#d23c3c', '2nd Sem, A.Y. 2024-25', '2026-06-07 01:02:06'),
-(4, 'CC 105', 'Methods of Research', 'Prof. Garcia', 3, 'KEY-CC5', '#f5a623', '2nd Sem, A.Y. 2024-25', '2026-06-07 01:02:06'),
-(5, 'GE 108', 'Contemporary World', 'Prof. Villanueva', 3, 'KEY-GE8', '#9b59b6', '2nd Sem, A.Y. 2024-25', '2026-06-07 01:02:06'),
-(6, 'PE 4', 'Physical Education 4', 'Prof. Mendoza', 2, 'KEY-PE4', '#1abc9c', '2nd Sem, A.Y. 2024-25', '2026-06-07 01:02:06');
+(7, 'COMP 009', 'Object Oriented Programming', 'VELASCO, MARIENEL N.', 3, 'KEY-COMP009', '#33b77a', '2nd Sem, A.Y. 2024-25', '2026-06-05 07:45:20'),
+(8, 'COMP 010', 'Information Management', 'CASTILLO, MELANI L.', 3, 'KEY-COMP010', '#4a90d9', '2nd Sem, A.Y. 2024-25', '2026-06-05 07:45:20'),
+(9, 'COMP 012', 'Network Administration', 'DELA REA, ARIS P.', 3, 'KEY-COMP012', '#d23c3c', '2nd Sem, A.Y. 2024-25', '2026-06-05 07:45:20'),
+(10, 'COMP 013', 'Human Computer Interaction', 'DE CLARO, CHRISTOPHER JAY CASTRONERO', 3, 'KEY-COMP013', '#f5a623', '2nd Sem, A.Y. 2024-25', '2026-06-05 07:45:20'),
+(11, 'COMP 014', 'Quantitative Methods with Modeling and Simulation', 'YEDRA, FE DALANGIN', 3, 'KEY-COMP014', '#9b59b6', '2nd Sem, A.Y. 2024-25', '2026-06-05 07:45:20'),
+(12, 'ELEC IT-FE2', 'BSIT Free Elective 2', 'MADERA, JOSHUA FANDIALAN', 3, 'KEY-ELECFE2', '#1abc9c', '2nd Sem, A.Y. 2024-25', '2026-06-05 07:45:20'),
+(13, 'INTE 202', 'Integrative Programming and Technologies 1', 'MADERA, JOSHUA FANDIALAN', 3, 'KEY-INTE202', '#e67e22', '2nd Sem, A.Y. 2024-25', '2026-06-05 07:45:20'),
+(14, 'PATHFIT 4', 'Physical Activity Towards Health and Fitness 4', 'CALABIG, MICHAEL F.', 2, 'KEY-PATHFIT4', '#2980b9', '2nd Sem, A.Y. 2024-25', '2026-06-05 07:45:20');
 
 -- --------------------------------------------------------
 
@@ -209,7 +238,7 @@ CREATE TABLE `tasks` (
   `status` enum('todo','in_progress','done') DEFAULT 'todo',
   `due_date` date DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -219,24 +248,30 @@ CREATE TABLE `tasks` (
 
 CREATE TABLE `users` (
   `id` int(11) NOT NULL,
-  `full_name` varchar(120) NOT NULL,
+  `first_name` varchar(120) NOT NULL,
+  `mid_name` varchar(120) DEFAULT NULL,
+  `last_name` varchar(120) NOT NULL,
   `email` varchar(160) NOT NULL,
   `student_id` varchar(30) NOT NULL,
   `year` tinyint(1) DEFAULT NULL,
   `program` varchar(100) DEFAULT NULL,
-  `section` smallint(2) DEFAULT NULL,
+  `section` varchar(40) DEFAULT NULL,
   `role` varchar(80) DEFAULT 'Student',
   `password` varchar(255) NOT NULL,
   `avatar` varchar(255) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `full_name`, `email`, `student_id`, `year`, `program`, `section`, `role`, `password`, `avatar`, `created_at`) VALUES
-(3, 'Gab', 'gab@pup.com', '2024-00030-ST-0', 2, 'BSIT', 1, 'admin', '$2y$10$PuTwUFvh0xokEDB6Xy8Q0elR5j40m1vAmLDM01okJsd9r3dn5AjFO', NULL, '2026-06-07 03:10:09');
+INSERT INTO `users` (`id`, `first_name`, `mid_name`, `last_name`, `email`, `student_id`, `year`, `program`, `section`, `role`, `password`, `avatar`, `created_at`) VALUES
+(1, 'Ryan Pol Malabanan', NULL, '', 'ryan@school.edu.ph', '2022-10234', 2, 'BSIT', '1', 'Student', '$2y$12$n4XRSfVJ4c3P5bQ/2fKzH.4q6aA1RY9kGwkl3tD.xUkdUfyF5jAoG', NULL, '2026-06-05 01:44:44'),
+(3, 'Calyx Warden', NULL, '', 'calyxwarden0315@gmail.com', '2024-00502-ST-0', 2, 'BSIT', '1', 'Admin', 'pogiako123', NULL, '2026-06-05 01:58:39'),
+(4, 'Edward Guevarra', NULL, '', 'edward.guevarra42@gmail.com', '2024-00501-ST-0', NULL, NULL, 'BSIT 2-1', 'Admin', '$2y$10$bXaeUOEN3SF.ov5SPMJPCuqY6W6X99dLytxc4S2tm/eeWUedjlPaG', NULL, '2026-06-06 14:15:33'),
+(5, 'Gab', NULL, '', 'gab@pup.com', '2024-00030-ST-0', 2, 'BSIT', '1', 'admin', '$2y$10$w4U37CLzMUnGkxpYbv9nzuyRJFtaJo/DwhRkHJ0/EsjKnhGi90sci', NULL, '2026-06-10 03:42:21'),
+(6, 'Juan', NULL, '', 'juan@pup.com', '2022-00030-ST-0', NULL, NULL, '', 'Student', '$2y$10$c66O0eeHta8EhP6TvMB.h.oQIRLPx14HYNVhY6Ik5vRcYhI7IfCgC', NULL, '2026-06-10 04:04:07');
 
 --
 -- Indexes for dumped tables
@@ -297,11 +332,19 @@ ALTER TABLE `kanban_tasks`
   ADD KEY `idx_kanban_user_status` (`user_id`,`status`);
 
 --
+-- Indexes for table `notifications`
+--
+ALTER TABLE `notifications`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `user_id` (`user_id`);
+
+--
 -- Indexes for table `sections`
 --
 ALTER TABLE `sections`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `name` (`name`);
+  ADD UNIQUE KEY `name` (`name`),
+  ADD KEY `fk_section_manager` (`manager_id`);
 
 --
 -- Indexes for table `section_subjects`
@@ -347,7 +390,7 @@ ALTER TABLE `announcements`
 -- AUTO_INCREMENT for table `enrollments`
 --
 ALTER TABLE `enrollments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `events`
@@ -380,6 +423,12 @@ ALTER TABLE `kanban_tasks`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `notifications`
+--
+ALTER TABLE `notifications`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `sections`
 --
 ALTER TABLE `sections`
@@ -395,7 +444,7 @@ ALTER TABLE `section_subjects`
 -- AUTO_INCREMENT for table `subjects`
 --
 ALTER TABLE `subjects`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT for table `tasks`
@@ -407,7 +456,7 @@ ALTER TABLE `tasks`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- Constraints for dumped tables
@@ -459,6 +508,18 @@ ALTER TABLE `forum_replies`
 --
 ALTER TABLE `kanban_tasks`
   ADD CONSTRAINT `kanban_tasks_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `notifications`
+--
+ALTER TABLE `notifications`
+  ADD CONSTRAINT `notifications_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `sections`
+--
+ALTER TABLE `sections`
+  ADD CONSTRAINT `fk_section_manager` FOREIGN KEY (`manager_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `section_subjects`

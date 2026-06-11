@@ -1,6 +1,6 @@
 <?php
-require_once 'includes/config.php';
-require_once 'includes/auth.php';
+require_once __DIR__ . '/includes/config.php';
+require_once __DIR__ . '/includes/auth.php';
 requireLogin();
 
 $user_id  = $_SESSION['user_id'];
@@ -69,6 +69,7 @@ function timeAgo(string $datetime): string {
     if ($diff < 604800) return floor($diff / 86400) . 'd ago';
     return date('M j, Y', strtotime($datetime));
 }
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -266,6 +267,8 @@ function timeAgo(string $datetime): string {
       margin-top: 8px;
     }
 
+
+
     .btn-delete-ann:hover { color: var(--accent-red); background: #fff0f0; }
 
     /* ── Empty State ── */
@@ -276,6 +279,7 @@ function timeAgo(string $datetime): string {
     }
 
     .ann-empty i { font-size: 40px; margin-bottom: 12px; display: block; opacity: 0.4; }
+
 
     /* ── Modal ── */
     .modal-content {

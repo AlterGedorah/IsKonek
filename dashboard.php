@@ -10,8 +10,39 @@ $first_name = explode(' ', $user_name)[0];
 $hour = (int) date('H');
 $greeting = $hour < 12 ? 'Good Morning' : ($hour < 17 ? 'Good Afternoon' : 'Good Evening');
 // Implement it to get it from database
-$subjects_query = $conn->query("SELECT * FROM subjects ORDER BY code");
-$subjects = $subjects_query->fetch_all(MYSQLI_ASSOC);
+$user_id = $_SESSION['user_id'];
+
+$subjects_query = $conn->prepare("
+    SELECT s.* FROM subjects s
+    JOIN enrollments e ON e.subject_id = s.id
+    WHERE e.user_id = ?
+    ORDER BY s.code
+");
+$subjects_query->bind_param("i", $user_id);
+$subjects_query->execute();
+$subjects = $subjects_query->get_result()->fetch_all(MYSQLI_ASSOC);
+
+$ann_query = $conn->prepare("
+    SELECT a.title, a.created_at, s.code AS subject, s.color
+    FROM announcements a
+    JOIN subjects s ON s.id = a.subject_id
+    JOIN enrollments e ON e.subject_id = a.subject_id AND e.user_id = ?
+    ORDER BY a.created_at DESC
+    LIMIT 5
+");
+$ann_query->bind_param("i", $user_id);
+$ann_query->execute();
+$ann_rows = $ann_query->get_result()->fetch_all(MYSQLI_ASSOC);
+
+$announcements = array_map(function($a) {
+    $diff = time() - strtotime($a['created_at']);
+    if ($diff < 60)          $time = 'just now';
+    elseif ($diff < 3600)    $time = floor($diff / 60) . 'm ago';
+    elseif ($diff < 86400)   $time = floor($diff / 3600) . 'h ago';
+    else                     $time = date('M j', strtotime($a['created_at']));
+    return ['title' => $a['title'], 'subject' => $a['subject'], 'color' => $a['color'], 'time' => $time];
+}, $ann_rows);
+
 $stats = [];
 ?>
 <!DOCTYPE html>
