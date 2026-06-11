@@ -2,8 +2,8 @@
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
--- Host: 127.0.0.1
--- Generation Time: Jun 11, 2026 at 04:00 AM
+-- Host: localhost
+-- Generation Time: Jun 11, 2026 at 12:17 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -18,7 +18,7 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Database: `iskonek_db`
+-- Database: `iskonek_db_1`
 --
 
 -- --------------------------------------------------------
@@ -26,6 +26,9 @@ SET time_zone = "+00:00";
 --
 -- Table structure for table `announcements`
 --
+DROP DATABASE IF EXISTS `iskonek_db`;
+CREATE DATABASE `iskonek_db`;
+USE `iskonek_db`;
 
 CREATE TABLE `announcements` (
   `id` int(11) NOT NULL,
@@ -245,7 +248,9 @@ CREATE TABLE `tasks` (
 
 CREATE TABLE `users` (
   `id` int(11) NOT NULL,
-  `full_name` varchar(120) NOT NULL,
+  `first_name` varchar(120) NOT NULL,
+  `mid_name` varchar(120) DEFAULT NULL,
+  `last_name` varchar(120) NOT NULL,
   `email` varchar(160) NOT NULL,
   `student_id` varchar(30) NOT NULL,
   `year` tinyint(1) DEFAULT NULL,
@@ -261,10 +266,12 @@ CREATE TABLE `users` (
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `full_name`, `email`, `student_id`, `year`, `program`, `section`, `role`, `password`, `avatar`, `created_at`) VALUES
-(1, 'Ryan Pol Malabanan', 'ryan@school.edu.ph', '2022-10234', 2, 'BSIT', '1', 'Student', '$2y$12$n4XRSfVJ4c3P5bQ/2fKzH.4q6aA1RY9kGwkl3tD.xUkdUfyF5jAoG', NULL, '2026-06-05 01:44:44'),
-(3, 'Calyx Warden', 'calyxwarden0315@gmail.com', '2024-00502-ST-0', 2, 'BSIT', '1', 'Admin', 'pogiako123', NULL, '2026-06-05 01:58:39'),
-(4, 'Edward Guevarra', 'edward.guevarra42@gmail.com', '2024-00501-ST-0', NULL, NULL, 'BSIT 2-1', 'Admin', '$2y$10$bXaeUOEN3SF.ov5SPMJPCuqY6W6X99dLytxc4S2tm/eeWUedjlPaG', NULL, '2026-06-06 14:15:33');
+INSERT INTO `users` (`id`, `first_name`, `mid_name`, `last_name`, `email`, `student_id`, `year`, `program`, `section`, `role`, `password`, `avatar`, `created_at`) VALUES
+(1, 'Ryan Pol Malabanan', NULL, '', 'ryan@school.edu.ph', '2022-10234', 2, 'BSIT', '1', 'Student', '$2y$12$n4XRSfVJ4c3P5bQ/2fKzH.4q6aA1RY9kGwkl3tD.xUkdUfyF5jAoG', NULL, '2026-06-05 01:44:44'),
+(3, 'Calyx Warden', NULL, '', 'calyxwarden0315@gmail.com', '2024-00502-ST-0', 2, 'BSIT', '1', 'Admin', 'pogiako123', NULL, '2026-06-05 01:58:39'),
+(4, 'Edward Guevarra', NULL, '', 'edward.guevarra42@gmail.com', '2024-00501-ST-0', NULL, NULL, 'BSIT 2-1', 'Admin', '$2y$10$bXaeUOEN3SF.ov5SPMJPCuqY6W6X99dLytxc4S2tm/eeWUedjlPaG', NULL, '2026-06-06 14:15:33'),
+(5, 'Gab', NULL, '', 'gab@pup.com', '2024-00030-ST-0', 2, 'BSIT', '1', 'admin', '$2y$10$w4U37CLzMUnGkxpYbv9nzuyRJFtaJo/DwhRkHJ0/EsjKnhGi90sci', NULL, '2026-06-10 03:42:21'),
+(6, 'Juan', NULL, '', 'juan@pup.com', '2022-00030-ST-0', NULL, NULL, '', 'Student', '$2y$10$c66O0eeHta8EhP6TvMB.h.oQIRLPx14HYNVhY6Ik5vRcYhI7IfCgC', NULL, '2026-06-10 04:04:07');
 
 --
 -- Indexes for dumped tables
@@ -449,7 +456,7 @@ ALTER TABLE `tasks`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- Constraints for dumped tables

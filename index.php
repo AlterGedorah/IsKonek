@@ -25,13 +25,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $user = $result->fetch_assoc();
             if (password_verify($password, $user['password'])) {
                 $_SESSION['user_id']   = $user['id'];
-                $_SESSION['full_name'] = $user['full_name'];
+                $_SESSION['fname'] = $user['first_name'];
+                $_SESSION['mname'] = $user['mid_name'];
+                $_SESSION['lname'] = $$user['last_name'];
                 $_SESSION['email']     = $user['email'];
                 $_SESSION['role']      = $user['role'];
                 $_SESSION['program']   = $user['program'];
                 $_SESSION['year']   = $user['year'];
                 $_SESSION['section']   = $user['section'];
-
+                $_SESSION['full_name'] = $full_name = $user['first_name'].' '.$user['mid_name'].' '.$user['last_name'];;
                 // Auto-enroll in section subjects
                 if (!empty($user['section'])) {
                     $sec = $conn->prepare("SELECT id FROM sections WHERE name = ?");

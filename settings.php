@@ -5,10 +5,11 @@ requireLogin();
 
 $user_id = $_SESSION['user_id'];
 
-$user_query = $conn->prepare("SELECT id, full_name, email, student_id, role, section,year, avatar FROM users WHERE id = ?");
+$user_query = $conn->prepare("SELECT id, first_name,mid_name,last_name, email, student_id, role, section,year, avatar FROM users WHERE id = ?");
 $user_query->bind_param("i", $user_id);
 $user_query->execute();
 $user = $user_query->get_result()->fetch_assoc();
+
 
 $success = $_GET['success'] ?? '';
 $error = $_GET['error'] ?? '';
@@ -243,40 +244,42 @@ function initials(string $name): string
           <!-- Settings Panel -->
           <div class="settings-panel">
 
-            <!-- Profile Section -->
             <div class="settings-section active" id="tab-profile">
-              <p class="settings-section-title">Profile Information</p>
-              <p class="settings-section-desc">Update your personal details.</p>
+              <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                  <p class="settings-section-title">Profile Information</p>
+                  <p class="settings-section-desc mb-0">Update your personal details.</p>
+                </div>
+                <button type="button" class="btn-upload-avatar" id="editProfileBtn" onclick="toggleProfileEdit()">
+                  <i class="bi bi-pencil me-1"></i> Edit Profile
+                </button>
+              </div>
 
               <?php if ($success === 'profile'): ?>
-                <div class="alert-success-inline"><i class="bi bi-check-circle me-1"></i>Profile updated successfully.
-                </div>
+                <div class="alert-success-inline"><i class="bi bi-check-circle me-1"></i>Profile updated successfully.</div>
               <?php endif; ?>
               <?php if ($error === 'profile'): ?>
                 <div class="alert-error mb-3">Failed to update profile. Please try again.</div>
               <?php endif; ?>
 
-              <!-- Avatar -->
               <div class="d-flex align-items-center gap-16 mb-4" style="gap:16px;">
-                <div class="avatar-preview" id="avatarPreview"
-                  style="background:<?= avatarColor($user['full_name']) ?>;">
+                <div class="avatar-preview" id="avatarPreview" style="background:<?= avatarColor($user['first_name']) ?>;">
                   <?php if (!empty($user['avatar'])): ?>
                     <img src="<?= htmlspecialchars($user['avatar']) ?>" alt="Avatar">
                   <?php else: ?>
-                    <?= initials($user['full_name']) ?>
+                    <?= initials($_SESSION['full_name']) ?>
                   <?php endif; ?>
                 </div>
                 <div>
-                  <label class="btn-upload-avatar" for="avatarInput">
+                  <label class="btn-upload-avatar d-none" for="avatarInput" id="avatarUploadLabel">
                     <i class="bi bi-upload me-1"></i> Upload Photo
                   </label>
-                  <input type="file" id="avatarInput" accept="image/*" style="display:none;"
-                    onchange="previewAvatar(this)">
-                  <p class="text-muted mt-1 mb-0" style="font-size:12px;">JPG, PNG up to 2MB</p>
+                  <input type="file" id="avatarInput" accept="image/*" style="display:none;" onchange="previewAvatar(this)">
+                  <p class="text-muted mt-1 mb-0 d-none" id="avatarUploadHint" style="font-size:12px;">JPG, PNG up to 2MB</p>
                 </div>
               </div>
 
-              <form method="POST" action="actions/settings_actions.php" enctype="multipart/form-data">
+              <form method="POST" action="actions/settings_actions.php" enctype="multipart/form-data" id="profileForm">
                 <input type="hidden" name="action" value="update_profile">
                 <input type="hidden" name="avatar_data" id="avatarData">
 
@@ -284,26 +287,26 @@ function initials(string $name): string
                   <div class="col-12">
                     <label class="form-label small fw-medium">Full Name</label>
                     <input type="text" name="full_name" class="form-control" required maxlength="120"
-                      value="<?= htmlspecialchars($user['full_name']) ?>"
-                      style="border-radius:10px;border-color:var(--border-color);">
+                      value="<?= htmlspecialchars($_SESSION['full_name']) ?>"
+                      style="border-radius:10px;border-color:var(--border-color);" disabled>
                   </div>
                   <div class="col-12">
                     <label class="form-label small fw-medium">Email Address</label>
                     <input type="email" name="email" class="form-control" required maxlength="160"
                       value="<?= htmlspecialchars($user['email']) ?>"
-                      style="border-radius:10px;border-color:var(--border-color);">
+                      style="border-radius:10px;border-color:var(--border-color);" disabled>
                   </div>
                   <div class="col-sm-6">
                     <label class="form-label small fw-medium">Student ID</label>
                     <input type="text" name="student_id" class="form-control" maxlength="30"
                       value="<?= htmlspecialchars($user['student_id']) ?>"
-                      style="border-radius:10px;border-color:var(--border-color);">
+                      style="border-radius:10px;border-color:var(--border-color);" disabled>
                   </div>
                   <div class="col-sm-6">
                     <label class="form-label small fw-medium">Program</label>
-                    <select name="course" class="form-select">
+                    <select name="course" class="form-select" disabled>
                       <optgroup label="Current Program" disabled>
-                        <option>
+                        <option selected>
                           <?= isset($_SESSION['program']) ? htmlspecialchars($_SESSION['program']) : '' ?>
                         </option>
                       </optgroup>
@@ -312,35 +315,33 @@ function initials(string $name): string
                         <option value="BSCS" <?= ($_POST['course'] ?? '') === 'BSCS' ? 'selected' : '' ?>>BSCS</option>
                         <option value="BSIS" <?= ($_POST['course'] ?? '') === 'BSIS' ? 'selected' : '' ?>>BSIS</option>
                         <option value="ACT" <?= ($_POST['course'] ?? '') === 'ACT' ? 'selected' : '' ?>>ACT</option>
+                      </optgroup>
                     </select>
-                    </optgroup>
                   </div>
                   <div class="col-sm-6">
                     <label class="form-label small fw-medium">Year</label>
-                    <input type="text" name="section" class="form-control" maxlength="40"
+                    <input type="text" name="year" class="form-control" maxlength="40"
                       value="<?= htmlspecialchars($user['year'] ?? '') ?>" placeholder="1"
-                      style="border-radius:10px;border-color:var(--border-color);">
+                      style="border-radius:10px;border-color:var(--border-color);" disabled>
                   </div>
                   <div class="col-sm-6">
                     <label class="form-label small fw-medium">Section</label>
                     <input type="text" name="section" class="form-control" maxlength="40"
                       value="<?= htmlspecialchars($user['section'] ?? '') ?>" placeholder="e.g. BSIT 2-1"
-                      style="border-radius:10px;border-color:var(--border-color);">
+                      style="border-radius:10px;border-color:var(--border-color);" disabled>
                   </div>
                 </div>
 
-                <button type="submit" class="btn-save">Save Changes</button>
+                <button type="submit" class="btn-save d-none" id="saveProfileBtn">Save Changes</button>
               </form>
             </div>
 
-            <!-- Password Section -->
             <div class="settings-section" id="tab-password">
               <p class="settings-section-title">Change Password</p>
               <p class="settings-section-desc">Make sure your new password is at least 8 characters.</p>
 
               <?php if ($success === 'password'): ?>
-                <div class="alert-success-inline"><i class="bi bi-check-circle me-1"></i>Password changed successfully.
-                </div>
+                <div class="alert-success-inline"><i class="bi bi-check-circle me-1"></i>Password changed successfully.</div>
               <?php endif; ?>
               <?php if ($error === 'password'): ?>
                 <div class="alert-error mb-3">Failed to change password. Please check your current password.</div>
@@ -381,6 +382,49 @@ function initials(string $name): string
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script>
+    let isEditingProfile = false;
+
+    function toggleProfileEdit() {
+      isEditingProfile = !isEditingProfile;
+
+      const form = document.getElementById('profileForm');
+      const editBtn = document.getElementById('editProfileBtn');
+      const saveBtn = document.getElementById('saveProfileBtn');
+      const uploadLabel = document.getElementById('avatarUploadLabel');
+      const uploadHint = document.getElementById('avatarUploadHint');
+
+      // Find all interactive elements inside the profile form
+      const fields = form.querySelectorAll('input, select, textarea');
+
+      if (isEditingProfile) {
+        // Unlock Form Elements
+        fields.forEach(field => field.removeAttribute('disabled'));
+
+        // Update Button Appearance to acting Cancel/Lock mode
+        editBtn.innerHTML = '<i class="bi bi-x-lg me-1"></i> Cancel';
+        editBtn.classList.replace('btn-upload-avatar', 'btn-light');
+
+        // Reveal functional actions
+        saveBtn.classList.remove('d-none');
+        uploadLabel.classList.remove('d-none');
+        uploadHint.classList.remove('d-none');
+      } else {
+        // Lock Form Elements
+        fields.forEach(field => field.setAttribute('disabled', 'true'));
+
+        // Reset Button UI
+        editBtn.innerHTML = '<i class="bi bi-pencil me-1"></i> Edit Profile';
+        editBtn.classList.replace('btn-light', 'btn-upload-avatar');
+
+        // Hide functional updates
+        saveBtn.classList.add('d-none');
+        uploadLabel.classList.add('d-none');
+        uploadHint.classList.add('d-none');
+
+        // Optional: Resets changes back to default saved states if user cancels out
+        form.reset();
+      }
+    }
     document.addEventListener('DOMContentLoaded', function () {
       const toggleBtn = document.getElementById('sidebarToggle');
       const sidebar = document.getElementById('sidebar');
