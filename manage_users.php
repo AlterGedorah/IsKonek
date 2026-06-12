@@ -150,9 +150,9 @@ function initials(string $name): string {
 
           <div class="row g-3 mb-3">
             <div class="col-md-6">
-              <label class="form-label small fw-medium">Full Name</label>
-              <input type="text" name="full_name" id="field_full_name" class="form-control" required maxlength="120"
-                     placeholder="e.g. Juan Dela Cruz" style="border-radius:10px;border-color:var(--border-color);">
+              <label class="form-label small fw-medium">First Name</label>
+              <input type="text" name="first_name" id="field_first_name" class="form-control" required maxlength="120"
+                     placeholder="e.g. Juan" style="border-radius:10px;border-color:var(--border-color);">
             </div>
             <div class="col-md-6">
               <label class="form-label small fw-medium">Email</label>
@@ -261,7 +261,7 @@ function openEditModal(u) {
   document.getElementById('userModalTitle').textContent = 'Edit User';
   document.getElementById('userSubmitBtn').textContent  = 'Save Changes';
   document.getElementById('field_user_id').value    = u.id;
-  document.getElementById('field_full_name').value  = u.full_name || '';
+  document.getElementById('field_first_name').value  = u.full_name || '';
   document.getElementById('field_email').value      = u.email || '';
   document.getElementById('field_student_id').value = u.student_id || '';
   document.getElementById('field_role').value       = u.role || 'Student';

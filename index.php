@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($email) || empty($password)) {
         $error = 'Please fill in all fields.';
     } else {
-        $stmt = $conn->prepare("SELECT id, full_name, email, password, role,year, section,program FROM users WHERE email = ?");
+        $stmt = $conn->prepare("SELECT id, first_name, mid_name, last_name, email, password, role, year, section, program FROM users WHERE email = ?");
         $stmt->bind_param("s", $email);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -24,17 +24,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($result->num_rows === 1) {
             $user = $result->fetch_assoc();
             if (password_verify($password, $user['password'])) {
+                $full_name = trim($user['first_name'] . ' ' . ($user['mid_name'] ? $user['mid_name'] . ' ' : '') . $user['last_name']);
                 $_SESSION['user_id']   = $user['id'];
-                $_SESSION['fname'] = $user['first_name'];
-                $_SESSION['mname'] = $user['mid_name'];
-                $_SESSION['lname'] = $$user['last_name'];
+                $_SESSION['full_name'] = $full_name;
+                $_SESSION['fname']     = $user['first_name'];
+                $_SESSION['mname']     = $user['mid_name'];
+                $_SESSION['lname']     = $user['last_name'];
                 $_SESSION['email']     = $user['email'];
                 $_SESSION['role']      = $user['role'];
                 $_SESSION['program']   = $user['program'];
-                $_SESSION['year']   = $user['year'];
+                $_SESSION['year']      = $user['year'];
                 $_SESSION['section']   = $user['section'];
-                $_SESSION['full_name'] = $full_name = $user['first_name'].' '.$user['mid_name'].' '.$user['last_name'];;
-                // Auto-enroll in section subjects
+
                 if (!empty($user['section'])) {
                     $sec = $conn->prepare("SELECT id FROM sections WHERE name = ?");
                     $sec->bind_param("s", $user['section']);

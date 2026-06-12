@@ -22,7 +22,7 @@ $filter_subject_id = isset($_GET['subject']) ? (int)$_GET['subject'] : 0;
 if ($filter_subject_id > 0) {
     $ann_query = $conn->prepare("
         SELECT a.id, a.title, a.body, a.created_at,
-               u.first_name, u.role AS poster_role,
+               CONCAT_WS(' ', u.first_name, u.mid_name, u.last_name) AS full_name, u.role AS poster_role,
                s.code AS subject_code, s.color AS subject_color, s.id AS subject_id
         FROM announcements a
         JOIN users u    ON u.id = a.created_by
@@ -35,7 +35,7 @@ if ($filter_subject_id > 0) {
 } else {
     $ann_query = $conn->prepare("
         SELECT a.id, a.title, a.body, a.created_at,
-               u.full_name, u.role AS poster_role,
+               CONCAT_WS(' ', u.first_name, u.mid_name, u.last_name) AS full_name, u.role AS poster_role,
                s.code AS subject_code, s.color AS subject_color, s.id AS subject_id
         FROM announcements a
         JOIN users u    ON u.id = a.created_by

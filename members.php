@@ -33,7 +33,7 @@ $my_section = $me['section'] ?? '';
 $all_sections = [];
 $all_unassigned = [];
 if ($is_admin) {
-  $sec_q = $conn->query("SELECT id, name, program FROM sections ORDER BY name");
+  $sec_q = $conn->query("SELECT id, name, course AS program FROM sections ORDER BY name");
   $all_sections = $sec_q ? $sec_q->fetch_all(MYSQLI_ASSOC) : [];
 
   // Users without a section
