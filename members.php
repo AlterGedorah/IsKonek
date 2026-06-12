@@ -60,7 +60,7 @@ if ($is_admin) {
         SELECT u.id, u.first_name, u.mid_name, u.last_name,
                CONCAT_WS(' ', u.first_name, u.mid_name, u.last_name) AS full_name,
                u.student_id, u.role, u.section, u.created_at,
-               s.id AS section_db_id, s.name AS section_name, s.program,
+               s.id AS section_db_id, s.name AS section_name, s.course AS program,
                CASE WHEN s.manager_id = u.id THEN 1 ELSE 0 END AS is_manager
         FROM users u
         LEFT JOIN sections s ON s.name = u.section
@@ -72,7 +72,7 @@ if ($is_admin) {
         SELECT u.id, u.first_name, u.mid_name, u.last_name,
                CONCAT_WS(' ', u.first_name, u.mid_name, u.last_name) AS full_name,
                u.student_id, u.role, u.section, u.created_at,
-               s.id AS section_db_id, s.name AS section_name, s.program,
+               s.id AS section_db_id, s.name AS section_name, s.course AS program,
                CASE WHEN s.manager_id = u.id THEN 1 ELSE 0 END AS is_manager
         FROM users u
         LEFT JOIN sections s ON s.name = u.section
