@@ -3,23 +3,27 @@ require_once 'includes/config.php';
 require_once 'includes/auth.php';
 requireLogin();
 
-$is_admin = strtolower($_SESSION['role'] ?? '') === 'sup_admin';
+$is_admin = strtolower($_SESSION['role'] ?? '') === 'admin';
 if (!$is_admin) {
     header('Location: dashboard.php');
     exit();
 }
 
-$sections_query = $conn->query("SELECT s.*, u.full_name AS manager_name FROM sections s LEFT JOIN users u ON s.manager_id = u.id ORDER BY s.name");
+$sections_query = $conn->query("
+    SELECT s.*, u.first_name, u.last_name,
+           CONCAT_WS(' ', u.first_name, u.mid_name, u.last_name) AS manager_name
+    FROM sections s
+    LEFT JOIN users u ON u.id = s.manager_id
+    ORDER BY s.name
+");
 $sections = $sections_query->fetch_all(MYSQLI_ASSOC);
 
 $subjects_query = $conn->query("SELECT id, code, name FROM subjects ORDER BY code");
 $all_subjects = $subjects_query->fetch_all(MYSQLI_ASSOC);
 
-// All users for manager dropdown (admins and students)
-$all_users_q = $conn->query("SELECT id, full_name, role FROM users ORDER BY full_name");
-$all_users = $all_users_q->fetch_all(MYSQLI_ASSOC);
+$users_query = $conn->query("SELECT id, CONCAT_WS(' ', first_name, mid_name, last_name) AS full_name, role FROM users ORDER BY first_name");
+$all_users = $users_query->fetch_all(MYSQLI_ASSOC);
 
-// Get subjects per section
 $section_subjects = [];
 $ss_query = $conn->query("SELECT section_id, subject_id FROM section_subjects");
 while ($row = $ss_query->fetch_assoc()) {
@@ -39,157 +43,52 @@ while ($row = $ss_query->fetch_assoc()) {
   <link href="assets/css/style.css" rel="stylesheet">
   <link rel="icon" href="assets/images/Icon.png">
   <style>
-    .sections-panel {
-      background: white;
-      border: 1px solid var(--border-color);
-      border-radius: 20px;
-      overflow: hidden;
-    }
-
-    .sections-panel-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 18px 24px;
-      border-bottom: 1px solid var(--border-color);
-    }
-
-    .sections-panel-title {
-      font-family: var(--font-heading);
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--text-primary);
-      margin: 0;
-    }
-
-    .btn-new-section {
-      background-color: var(--accent-green);
-      color: white;
-      border: none;
-      border-radius: 10px;
-      padding: 8px 18px;
-      font-size: 14px;
-      font-weight: 500;
-      font-family: var(--font-heading);
-      transition: background-color 0.15s;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .btn-new-section:hover { background-color: #28a06a; color: white; }
-
-    .section-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 16px 24px;
-      border-bottom: 1px solid var(--border-color);
-      transition: background-color 0.15s;
-      gap: 16px;
-    }
-
-    .section-row:last-child { border-bottom: none; }
-    .section-row:hover { background-color: #f9fffe; }
-
-    .section-info { flex: 1; min-width: 0; }
-
-    .section-name {
-      font-family: var(--font-heading);
-      font-weight: 600;
-      font-size: 14px;
-      color: var(--text-primary);
-      margin-bottom: 4px;
-    }
-
-    .section-subjects-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 5px;
-    }
-
-    .subject-tag {
-      font-size: 11px;
-      padding: 2px 8px;
-      background: #f0faf5;
-      color: var(--accent-green);
-      border-radius: 20px;
-      font-weight: 500;
-      border: 1px solid #b3e6cc;
-    }
-
-    .section-actions {
-      display: flex;
-      gap: 6px;
-    }
-
-    .btn-edit-sec, .btn-delete-sec {
-      background: none;
-      border: none;
-      padding: 5px 8px;
-      border-radius: 8px;
-      font-size: 13px;
-      cursor: pointer;
-      transition: background 0.15s, color 0.15s;
-    }
-
-    .btn-edit-sec { color: var(--text-muted); }
-    .btn-edit-sec:hover { background: #eaf6f0; color: var(--accent-green); }
-    .btn-delete-sec { color: var(--text-muted); }
-    .btn-delete-sec:hover { background: #fff0f0; color: var(--accent-red); }
-
-    .sections-empty {
-      padding: 60px 24px;
-      text-align: center;
-      color: var(--text-muted);
-    }
-
-    .sections-empty i { font-size: 40px; margin-bottom: 12px; display: block; opacity: 0.4; }
-
-    .modal-content {
-      border-radius: 20px !important;
-      border: 1px solid var(--border-color) !important;
-    }
-
-    .form-control:focus, .form-check-input:focus {
-      border-color: var(--accent-green);
-      box-shadow: 0 0 0 3px rgba(51,183,122,0.15);
-    }
-
-    .form-check-input:checked { background-color: var(--accent-green); border-color: var(--accent-green); }
-
-    .subjects-checklist {
-      max-height: 240px;
-      overflow-y: auto;
-      border: 1px solid var(--border-color);
-      border-radius: 10px;
-      padding: 8px 12px;
-    }
-
-    .subjects-checklist .form-check { padding: 5px 0; border-bottom: 1px solid #f0f0f0; }
-    .subjects-checklist .form-check:last-child { border-bottom: none; }
+    .sections-panel { background:white; border:1px solid var(--border-color); border-radius:20px; overflow:hidden; }
+    .sections-panel-header { display:flex; align-items:center; justify-content:space-between; padding:18px 24px; border-bottom:1px solid var(--border-color); }
+    .sections-panel-title { font-family:var(--font-heading); font-size:15px; font-weight:600; color:var(--text-primary); margin:0; }
+    .btn-new-section { background-color:var(--accent-green); color:white; border:none; border-radius:10px; padding:8px 18px; font-size:14px; font-weight:500; font-family:var(--font-heading); transition:background-color 0.15s; display:flex; align-items:center; gap:6px; }
+    .btn-new-section:hover { background-color:#28a06a; color:white; }
+    .section-row { display:flex; align-items:center; justify-content:space-between; padding:16px 24px; border-bottom:1px solid var(--border-color); transition:background-color 0.15s; gap:16px; }
+    .section-row:last-child { border-bottom:none; }
+    .section-row:hover { background-color:#f9fffe; }
+    .section-info { flex:1; min-width:0; }
+    .section-name { font-family:var(--font-heading); font-weight:600; font-size:14px; color:var(--text-primary); margin-bottom:4px; }
+    .section-meta { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+    .section-manager-badge { display:inline-flex; align-items:center; gap:4px; font-size:12px; color:#856404; background:#fff3cd; padding:2px 8px; border-radius:20px; font-weight:500; }
+    .section-subjects-list { display:flex; flex-wrap:wrap; gap:5px; margin-top:6px; }
+    .subject-tag { font-size:11px; padding:2px 8px; background:#f0faf5; color:var(--accent-green); border-radius:20px; font-weight:500; border:1px solid #b3e6cc; }
+    .section-actions { display:flex; gap:6px; }
+    .btn-edit-sec, .btn-delete-sec { background:none; border:none; padding:5px 8px; border-radius:8px; font-size:13px; cursor:pointer; transition:background 0.15s, color 0.15s; }
+    .btn-edit-sec { color:var(--text-muted); }
+    .btn-edit-sec:hover { background:#eaf6f0; color:var(--accent-green); }
+    .btn-delete-sec { color:var(--text-muted); }
+    .btn-delete-sec:hover { background:#fff0f0; color:var(--accent-red); }
+    .sections-empty { padding:60px 24px; text-align:center; color:var(--text-muted); }
+    .sections-empty i { font-size:40px; margin-bottom:12px; display:block; opacity:0.4; }
+    .modal-content { border-radius:20px !important; border:1px solid var(--border-color) !important; }
+    .form-control:focus, .form-select:focus, .form-check-input:focus { border-color:var(--accent-green); box-shadow:0 0 0 3px rgba(51,183,122,0.15); }
+    .form-check-input:checked { background-color:var(--accent-green); border-color:var(--accent-green); }
+    .subjects-checklist { max-height:200px; overflow-y:auto; border:1px solid var(--border-color); border-radius:10px; padding:8px 12px; }
+    .subjects-checklist .form-check { padding:5px 0; border-bottom:1px solid #f0f0f0; }
+    .subjects-checklist .form-check:last-child { border-bottom:none; }
   </style>
 </head>
 <body>
 <div class="app-wrapper">
   <div class="sidebar-overlay" id="sidebarOverlay"></div>
   <?php include 'includes/sidebar.php'; ?>
-
   <div class="main-content">
     <?php include 'includes/navbar.php'; ?>
-
     <div class="page-body">
-
       <div class="mb-4">
         <h2 class="hero-greeting mb-1">Manage Sections 🏫</h2>
-        <p class="hero-sub text-muted">Create sections and assign subjects to them for auto-enrollment.</p>
+        <p class="hero-sub text-muted">Create sections, assign managers, and set subjects for auto-enrollment.</p>
       </div>
 
       <div class="sections-panel">
         <div class="sections-panel-header">
           <p class="sections-panel-title">All Sections (<?= count($sections) ?>)</p>
-          <button class="btn-new-section" data-bs-toggle="modal" data-bs-target="#sectionModal"
-                  onclick="openAddModal()">
+          <button class="btn-new-section" data-bs-toggle="modal" data-bs-target="#sectionModal" onclick="openAddModal()">
             <i class="bi bi-plus-lg"></i> Add Section
           </button>
         </div>
@@ -198,20 +97,26 @@ while ($row = $ss_query->fetch_assoc()) {
           <div class="sections-empty">
             <i class="bi bi-diagram-3"></i>
             <p class="mb-1 fw-medium" style="font-size:15px;">No sections yet</p>
-            <p style="font-size:13px;">Add a section to get started.</p>
           </div>
         <?php else: ?>
           <?php foreach ($sections as $sec): ?>
             <?php $sec_subjects = $section_subjects[$sec['id']] ?? []; ?>
             <div class="section-row">
               <div class="section-info">
-                <div class="section-name"><?= htmlspecialchars($sec['name']) ?> <span class="text-muted fw-normal" style="font-size:12px;">(<?= htmlspecialchars($sec['course']) ?>)</span></div>
-                <?php if ($sec['manager_name']): ?>
-                  <div style="font-size:12px;color:var(--accent-green);margin-top:2px;"><i class="bi bi-person-check-fill me-1"></i>Manager: <?= htmlspecialchars($sec['manager_name']) ?></div>
-                <?php else: ?>
-                  <div style="font-size:12px;color:var(--text-muted);margin-top:2px;"><i class="bi bi-person-dash me-1"></i>No classroom manager</div>
-                <?php endif; ?>
-                <div class="section-subjects-list mt-1">
+                <div class="section-name">
+                  <?= htmlspecialchars($sec['name']) ?>
+                  <span class="text-muted fw-normal" style="font-size:12px;">
+                    (<?= htmlspecialchars($sec['program']) ?> <?= $sec['year'] ?>-<?= $sec['section'] ?> · <?= htmlspecialchars($sec['school_year']) ?>)
+                  </span>
+                </div>
+                <div class="section-meta">
+                  <?php if ($sec['manager_name']): ?>
+                    <span class="section-manager-badge"><i class="bi bi-person-check"></i><?= htmlspecialchars($sec['manager_name']) ?></span>
+                  <?php else: ?>
+                    <span style="font-size:12px;color:var(--text-muted);">No manager — first enrollee becomes manager</span>
+                  <?php endif; ?>
+                </div>
+                <div class="section-subjects-list">
                   <?php if (empty($sec_subjects)): ?>
                     <span style="font-size:12px;color:var(--text-muted);">No subjects assigned</span>
                   <?php else: ?>
@@ -224,12 +129,10 @@ while ($row = $ss_query->fetch_assoc()) {
                 </div>
               </div>
               <div class="section-actions">
-                <button class="btn-edit-sec" title="Edit"
-                        onclick='openEditModal(<?= json_encode(['id'=>$sec['id'],'name'=>$sec['name'],'course'=>$sec['course'],'manager_id'=>$sec['manager_id']]) ?>, <?= json_encode($sec_subjects) ?>)'>
+                <button class="btn-edit-sec" onclick='openEditModal(<?= json_encode($sec) ?>, <?= json_encode($sec_subjects) ?>)'>
                   <i class="bi bi-pencil"></i>
                 </button>
-                <button class="btn-delete-sec" title="Delete"
-                        onclick="confirmDelete(<?= $sec['id'] ?>, '<?= htmlspecialchars(addslashes($sec['name'])) ?>')">
+                <button class="btn-delete-sec" onclick="confirmDelete(<?= $sec['id'] ?>, '<?= htmlspecialchars(addslashes($sec['name'])) ?>')">
                   <i class="bi bi-trash3"></i>
                 </button>
               </div>
@@ -237,12 +140,11 @@ while ($row = $ss_query->fetch_assoc()) {
           <?php endforeach; ?>
         <?php endif; ?>
       </div>
-
     </div>
   </div>
 </div>
 
-<!-- Add / Edit Section Modal -->
+<!-- Add/Edit Modal -->
 <div class="modal fade" id="sectionModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
@@ -256,16 +158,14 @@ while ($row = $ss_query->fetch_assoc()) {
           <input type="hidden" name="section_id" id="field_section_id">
 
           <div class="row g-3 mb-3">
-            <div class="col-7">
+            <div class="col-6">
               <label class="form-label small fw-medium">Section Name</label>
               <input type="text" name="name" id="field_name" class="form-control" required maxlength="40"
-                     placeholder="e.g. BSIT 2-1"
-                     style="border-radius:10px;border-color:var(--border-color);">
+                     placeholder="e.g. BSIT 2-1" style="border-radius:10px;border-color:var(--border-color);">
             </div>
-            <div class="col-5">
-              <label class="form-label small fw-medium">Course</label>
-              <select name="course" id="field_course" class="form-select"
-                      style="border-radius:10px;border-color:var(--border-color);">
+            <div class="col-6">
+              <label class="form-label small fw-medium">Program</label>
+              <select name="program" id="field_program" class="form-select" style="border-radius:10px;border-color:var(--border-color);">
                 <option value="BSIT">BSIT</option>
                 <option value="BSCS">BSCS</option>
                 <option value="BSIS">BSIS</option>
@@ -274,13 +174,30 @@ while ($row = $ss_query->fetch_assoc()) {
             </div>
           </div>
 
-          <div class="mb-4">
-            <label class="form-label small fw-medium">Classroom Manager <span class="text-muted">(optional)</span></label>
-            <select name="manager_id" id="field_manager_id" class="form-select"
-                    style="border-radius:10px;border-color:var(--border-color);">
-              <option value="0">— None —</option>
+          <div class="row g-3 mb-3">
+            <div class="col-4">
+              <label class="form-label small fw-medium">Year</label>
+              <input type="number" name="year" id="field_year" class="form-control" min="1" max="5" value="2"
+                     style="border-radius:10px;border-color:var(--border-color);">
+            </div>
+            <div class="col-4">
+              <label class="form-label small fw-medium">Section No.</label>
+              <input type="number" name="section" id="field_section" class="form-control" min="1" value="1"
+                     style="border-radius:10px;border-color:var(--border-color);">
+            </div>
+            <div class="col-4">
+              <label class="form-label small fw-medium">School Year</label>
+              <input type="text" name="school_year" id="field_school_year" class="form-control" maxlength="20"
+                     placeholder="e.g. 2024-2025" style="border-radius:10px;border-color:var(--border-color);">
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-medium">Classroom Manager <span class="text-muted fw-normal">(optional)</span></label>
+            <select name="manager_id" id="field_manager_id" class="form-select" style="border-radius:10px;border-color:var(--border-color);">
+              <option value="">— None (first enrollee becomes manager) —</option>
               <?php foreach ($all_users as $u): ?>
-                <option value="<?= $u['id'] ?>"><?= htmlspecialchars($u['full_name']) ?> <span style="color:#999;">(<?= htmlspecialchars($u['role']) ?>)</span></option>
+                <option value="<?= $u['id'] ?>"><?= htmlspecialchars($u['full_name']) ?> (<?= htmlspecialchars($u['role']) ?>)</option>
               <?php endforeach; ?>
             </select>
           </div>
@@ -290,9 +207,8 @@ while ($row = $ss_query->fetch_assoc()) {
             <div class="subjects-checklist">
               <?php foreach ($all_subjects as $subj): ?>
                 <div class="form-check">
-                  <input class="form-check-input" type="checkbox"
-                         name="subjects[]" value="<?= $subj['id'] ?>"
-                         id="subj_<?= $subj['id'] ?>">
+                  <input class="form-check-input" type="checkbox" name="subjects[]"
+                         value="<?= $subj['id'] ?>" id="subj_<?= $subj['id'] ?>">
                   <label class="form-check-label small" for="subj_<?= $subj['id'] ?>">
                     <strong><?= htmlspecialchars($subj['code']) ?></strong> — <?= htmlspecialchars($subj['name']) ?>
                   </label>
@@ -308,7 +224,7 @@ while ($row = $ss_query->fetch_assoc()) {
   </div>
 </div>
 
-<!-- Delete Confirm Modal -->
+<!-- Delete Modal -->
 <div class="modal fade" id="deleteSectionModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered modal-sm">
     <div class="modal-content">
@@ -317,7 +233,7 @@ while ($row = $ss_query->fetch_assoc()) {
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body pt-2 pb-1">
-        <p class="text-muted small mb-0">Deleting <strong id="deleteSectionName"></strong> will not affect existing enrollments.</p>
+        <p class="text-muted small mb-0">Deleting <strong id="deleteSectionName"></strong> will not remove existing enrollments.</p>
       </div>
       <div class="modal-footer border-0 pt-2">
         <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Cancel</button>
@@ -349,10 +265,13 @@ function openAddModal() {
 function openEditModal(sec, subjectIds) {
   document.getElementById('sectionModalTitle').textContent = 'Edit Section';
   document.getElementById('sectionSubmitBtn').textContent  = 'Save Changes';
-  document.getElementById('field_section_id').value = sec.id;
-  document.getElementById('field_name').value        = sec.name;
-  document.getElementById('field_course').value      = sec.course;
-  document.getElementById('field_manager_id').value  = sec.manager_id || 0;
+  document.getElementById('field_section_id').value   = sec.id;
+  document.getElementById('field_name').value          = sec.name;
+  document.getElementById('field_program').value       = sec.program;
+  document.getElementById('field_year').value          = sec.year;
+  document.getElementById('field_section').value       = sec.section;
+  document.getElementById('field_school_year').value   = sec.school_year;
+  document.getElementById('field_manager_id').value    = sec.manager_id ?? '';
   document.getElementById('sectionError').style.display = 'none';
   document.querySelectorAll('input[name="subjects[]"]').forEach(cb => {
     cb.checked = subjectIds.includes(parseInt(cb.value));
@@ -363,25 +282,16 @@ function openEditModal(sec, subjectIds) {
 document.getElementById('sectionForm').addEventListener('submit', function (e) {
   e.preventDefault();
   const fd = new FormData(this);
-  const isEdit = !!fd.get('section_id');
-  fd.append('action', isEdit ? 'edit_section' : 'add_section');
+  fd.append('action', fd.get('section_id') ? 'edit_section' : 'add_section');
   const errEl = document.getElementById('sectionError');
   errEl.style.display = 'none';
-
   fetch('actions/section_actions.php', { method: 'POST', body: fd })
     .then(r => r.json())
     .then(data => {
-      if (data.success) {
-        window.location.reload();
-      } else {
-        errEl.textContent = data.message || 'Something went wrong.';
-        errEl.style.display = 'block';
-      }
+      if (data.success) window.location.reload();
+      else { errEl.textContent = data.message || 'Something went wrong.'; errEl.style.display = 'block'; }
     })
-    .catch(() => {
-      errEl.textContent = 'Network error. Please try again.';
-      errEl.style.display = 'block';
-    });
+    .catch(() => { errEl.textContent = 'Network error.'; errEl.style.display = 'block'; });
 });
 
 let pendingDeleteId = null;
@@ -398,7 +308,6 @@ document.getElementById('confirmDeleteBtn').addEventListener('click', function (
   const fd = new FormData();
   fd.append('action', 'delete_section');
   fd.append('section_id', pendingDeleteId);
-
   fetch('actions/section_actions.php', { method: 'POST', body: fd })
     .then(r => r.json())
     .then(data => {
@@ -407,11 +316,7 @@ document.getElementById('confirmDeleteBtn').addEventListener('click', function (
       else alert(data.message || 'Failed to delete.');
       pendingDeleteId = null;
     })
-    .catch(() => {
-      deleteModal.hide();
-      alert('Network error.');
-      pendingDeleteId = null;
-    });
+    .catch(() => { deleteModal.hide(); alert('Network error.'); pendingDeleteId = null; });
 });
 </script>
 </body>

@@ -9,16 +9,18 @@ if (isLoggedIn()) {
 
 $error = '';
 
+// Fetch sections for dropdown
+$sections_q = $conn->query("SELECT id, name, program, year, section, school_year FROM sections ORDER BY name");
+$all_sections = $sections_q ? $sections_q->fetch_all(MYSQLI_ASSOC) : [];
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $first_name = trim($_POST['fname']     ?? '');
-    $mid_name   = trim($_POST['mname']     ?? '');
-    $last_name  = trim($_POST['lname']     ?? '');
-    $email      = trim($_POST['email']     ?? '');
-    $student_id = trim($_POST['student_id']?? '');
-    $course     = trim($_POST['course']    ?? '');
-    $year       = (int)($_POST['year']     ?? 0);
-    $section    = (int)($_POST['section']  ?? 0);
-    $password   = $_POST['password']       ?? '';
+    $first_name = trim($_POST['fname']      ?? '');
+    $mid_name   = trim($_POST['mname']      ?? '');
+    $last_name  = trim($_POST['lname']      ?? '');
+    $email      = trim($_POST['email']      ?? '');
+    $student_id = trim($_POST['student_id'] ?? '');
+    $section_id = (int)($_POST['section_id']?? 0);
+    $password   = $_POST['password']        ?? '';
     $confirm    = $_POST['confirm_password']?? '';
 
     if (empty($first_name) || empty($last_name) || empty($email) || empty($student_id) || empty($password)) {
@@ -36,40 +38,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($check->get_result()->num_rows > 0) {
             $error = 'An account with this email already exists.';
         } else {
-            $hashed    = password_hash($password, PASSWORD_BCRYPT);
-            $role_str  = 'Student';
-            $computed_section = $section > 0 ? $course . ' ' . $year . '-' . $section : null;
+            $hashed   = password_hash($password, PASSWORD_BCRYPT);
+            $role_str = 'Student';
 
-            $stmt = $conn->prepare("INSERT INTO users (first_name, mid_name, last_name, email, student_id, year, program, section, role, password, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,NOW())");
-            $stmt->bind_param("ssssssisss", $first_name, $mid_name, $last_name, $email, $student_id, $year, $course, $computed_section, $role_str, $hashed);
+            $stmt = $conn->prepare("INSERT INTO users (first_name, mid_name, last_name, email, student_id, role, password, created_at) VALUES (?,?,?,?,?,?,?,NOW())");
+            $stmt->bind_param("sssssss", $first_name, $mid_name, $last_name, $email, $student_id, $role_str, $hashed);
 
             if ($stmt->execute()) {
                 $new_user_id = $conn->insert_id;
                 $stmt->close();
 
-                // Auto-enroll in section subjects
-                if ($computed_section) {
-                    $sec = $conn->prepare("SELECT id FROM sections WHERE name = ?");
-                    $sec->bind_param("s", $computed_section);
-                    $sec->execute();
-                    $sec_row = $sec->get_result()->fetch_assoc();
-                    $sec->close();
+                // Auto-enroll in section subjects if section selected
+                if ($section_id > 0) {
+                    $subs = $conn->prepare("SELECT subject_id FROM section_subjects WHERE section_id = ?");
+                    $subs->bind_param("i", $section_id);
+                    $subs->execute();
+                    $sub_rows = $subs->get_result()->fetch_all(MYSQLI_ASSOC);
+                    $subs->close();
 
-                    if ($sec_row) {
-                        $subs = $conn->prepare("SELECT subject_id FROM section_subjects WHERE section_id = ?");
-                        $subs->bind_param("i", $sec_row['id']);
-                        $subs->execute();
-                        $sub_rows = $subs->get_result()->fetch_all(MYSQLI_ASSOC);
-                        $subs->close();
-
-                        if (!empty($sub_rows)) {
-                            $enroll = $conn->prepare("INSERT IGNORE INTO enrollments (user_id, subject_id) VALUES (?,?)");
-                            foreach ($sub_rows as $sub) {
-                                $enroll->bind_param("ii", $new_user_id, $sub['subject_id']);
-                                $enroll->execute();
-                            }
-                            $enroll->close();
+                    if (!empty($sub_rows)) {
+                        $enroll = $conn->prepare("INSERT IGNORE INTO enrollments (user_id, subject_id) VALUES (?,?)");
+                        foreach ($sub_rows as $sub) {
+                            $enroll->bind_param("ii", $new_user_id, $sub['subject_id']);
+                            $enroll->execute();
                         }
+                        $enroll->close();
+                    }
+
+                    // Check if section has a manager — if not, first enrollee becomes manager
+                    $sec_check = $conn->prepare("SELECT manager_id FROM sections WHERE id = ?");
+                    $sec_check->bind_param("i", $section_id);
+                    $sec_check->execute();
+                    $sec_row = $sec_check->get_result()->fetch_assoc();
+                    $sec_check->close();
+
+                    if (empty($sec_row['manager_id'])) {
+                        $set_mgr = $conn->prepare("UPDATE sections SET manager_id = ? WHERE id = ?");
+                        $set_mgr->bind_param("ii", $new_user_id, $section_id);
+                        $set_mgr->execute();
+                        $set_mgr->close();
+
+                        $ins_mgr = $conn->prepare("INSERT IGNORE INTO managers (section_id, user_id) VALUES (?,?)");
+                        $ins_mgr->bind_param("ii", $section_id, $new_user_id);
+                        $ins_mgr->execute();
+                        $ins_mgr->close();
                     }
                 }
 
@@ -117,7 +129,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <form method="POST" action="">
       <div class="row g-4 mb-3">
 
-        <div class="col-md-6 d-flex flex-column justify-content-between gap-3">
+        <div class="col-md-6 d-flex flex-column gap-3">
           <div class="d-flex flex-row gap-1">
             <div class="col-4">
               <label class="form-label small fw-medium">First Name <span class="text-danger">*</span></label>
@@ -154,7 +166,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           </div>
         </div>
 
-        <div class="col-md-6 d-flex flex-column justify-content-between gap-3">
+        <div class="col-md-6 d-flex flex-column gap-3">
           <div>
             <label class="form-label small fw-medium">Student ID <span class="text-danger">*</span></label>
             <input type="text" name="student_id" class="form-control" placeholder="2024-XXXXX"
@@ -162,26 +174,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           </div>
 
           <div>
-            <label class="form-label small fw-medium">Course / Program</label>
-            <select name="course" class="form-select">
-              <option value="BSIT" <?= ($_POST['course'] ?? '') === 'BSIT' ? 'selected' : '' ?>>BSIT</option>
-              <option value="BSCS" <?= ($_POST['course'] ?? '') === 'BSCS' ? 'selected' : '' ?>>BSCS</option>
-              <option value="BSIS" <?= ($_POST['course'] ?? '') === 'BSIS' ? 'selected' : '' ?>>BSIS</option>
-              <option value="ACT"  <?= ($_POST['course'] ?? '') === 'ACT'  ? 'selected' : '' ?>>ACT</option>
+            <label class="form-label small fw-medium">Section</label>
+            <select name="section_id" class="form-select">
+              <option value="">— Select your section —</option>
+              <?php foreach ($all_sections as $sec): ?>
+                <option value="<?= $sec['id'] ?>" <?= ((int)($_POST['section_id'] ?? 0) === (int)$sec['id']) ? 'selected' : '' ?>>
+                  <?= htmlspecialchars($sec['name']) ?> — <?= htmlspecialchars($sec['program']) ?> <?= $sec['year'] ?>-<?= $sec['section'] ?> (<?= htmlspecialchars($sec['school_year']) ?>)
+                </option>
+              <?php endforeach; ?>
             </select>
-          </div>
-
-          <div class="row g-2">
-            <div class="col-6">
-              <label class="form-label small fw-medium">Year Level</label>
-              <input type="number" name="year" class="form-control" placeholder="e.g. 2"
-                     value="<?= htmlspecialchars($_POST['year'] ?? '') ?>">
-            </div>
-            <div class="col-6">
-              <label class="form-label small fw-medium">Section</label>
-              <input type="number" name="section" class="form-control" placeholder="e.g. 1"
-                     value="<?= htmlspecialchars($_POST['section'] ?? '') ?>">
-            </div>
           </div>
         </div>
 
