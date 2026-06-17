@@ -20,7 +20,9 @@ SET time_zone = "+00:00";
 --
 -- Database: `iskonek_db`
 --
-
+DROP DATABASE IF EXISTS `iskonek_db`;
+CREATE DATABASE `iskonek_db`;
+USE `iskonek_db`;
 -- --------------------------------------------------------
 
 --
