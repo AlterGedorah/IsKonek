@@ -81,7 +81,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
                     Member Dictionary
                 </a>
             </li>
-            <?php if (strtolower($_SESSION['role'] ?? '') === 'admin'): ?>
+            
                 <li class="nav-item">
                     <a href="manage_subjects.php"
                         class="nav-link sidebar-link <?= $current_page === 'manage_subjects.php' ? 'active' : '' ?>">
@@ -89,6 +89,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
                         Manage Subjects
                     </a>
                 </li>
+                <?php if (strtolower($_SESSION['role'] ?? '') === 'admin'): ?>'
                 <li class="nav-item">
                     <a href="manage_users.php"
                         class="nav-link sidebar-link <?= $current_page === 'manage_users.php' ? 'active' : '' ?>">
@@ -136,12 +137,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
                     <p class="mb-0 text-muted" style="font-size:12px;">
                         <?= isset($_SESSION['role']) ? htmlspecialchars($_SESSION['role']) : '' ?>
                     </p>
-                    <p class="mb-0 text-muted" style="font-size:12px;">
-                        <?= isset($_SESSION['program']) ? htmlspecialchars($_SESSION['program']) : '' ?>
-                    </p>
-                    <p class="mb-0 text-muted" style="font-size:12px;">
-                        <?= isset($_SESSION['year']) ? htmlspecialchars($_SESSION['year']) : '' ?>
-                    </p>
+
                     <p class="mb-0 text-muted" style="font-size:12px;">
                         <?= isset($_SESSION['section']) ? htmlspecialchars($_SESSION['section']) : '' ?>
                     </p>

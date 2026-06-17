@@ -100,6 +100,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <h4 class="fw-medium mb-1" style="font-family:'Poppins',sans-serif;">Welcome back!</h4>
     <p class="text-muted mb-4" style="font-size:14px;">Sign in to your account to continue.</p>
 
+    <?php if (isset($_GET['registered'])): ?>
+      <div class="mb-3 p-3 rounded-3" style="background:#f0faf5;border:1px solid #b3e6cc;color:#1a7a4c;font-size:13px;">
+        <i class="bi bi-check-circle me-1"></i>Registration successful! You can now sign in.
+      </div>
+    <?php endif; ?>
     <?php if ($error): ?>
       <div class="alert-error mb-3"><i class="bi bi-exclamation-circle me-1"></i><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
