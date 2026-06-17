@@ -8,26 +8,19 @@ $is_admin = strtolower($_SESSION['role'] ?? '') === 'admin';
 
 // Get current user's section
 $me_q = $conn->prepare("
-        SELECT id, 
-           first_name, 
-           mid_name, 
-           last_name, 
-           CONCAT_WS(' ', first_name, mid_name, last_name) AS full_name,
-           email, 
-           student_id, 
-           role, 
-           program,
-           year,
-           section,
-           created_at
-           FROM users 
-           WHERE id = ?");
+        SELECT u.id, u.first_name, u.mid_name, u.last_name, 
+           CONCAT_WS(' ', u.first_name, u.mid_name, u.last_name) AS full_name,
+           u.email, u.student_id, u.role, u.section_id, u.created_at,
+           s.program, s.year, s.section, s.name AS section_name
+        FROM users u
+        LEFT JOIN sections s ON u.section_id = s.id
+        WHERE u.id = ?");
 $me_q->bind_param("i", $current_user_id);
 $me_q->execute();
 $me = $me_q->get_result()->fetch_assoc();
 $me_q->close();
 
-$my_section = $me['section'] ?? '';
+$my_section = $me['section_id'] ?? null;
 
 // --- For admins: fetch all sections for the "add member" feature ---
 $all_sections = [];
@@ -37,19 +30,10 @@ if ($is_admin) {
   $all_sections = $sec_q ? $sec_q->fetch_all(MYSQLI_ASSOC) : [];
 
   // Users without a section
-  $unassigned_q = $conn->query("SELECT id, 
-           first_name, 
-           mid_name, 
-           last_name, 
-           CONCAT_WS(' ', first_name, mid_name, last_name) AS full_name,
-           email, 
-           student_id, 
-           role, 
-           program,
-           year,
-           section,
-           created_at 
-           FROM users WHERE section IS NULL OR section = '' ORDER BY full_name");
+  $unassigned_q = $conn->query("SELECT u.id, u.first_name, u.mid_name, u.last_name, 
+           CONCAT_WS(' ', u.first_name, u.mid_name, u.last_name) AS full_name,
+           u.email, u.student_id, u.role, u.section_id, u.created_at 
+           FROM users u WHERE u.section_id IS NULL ORDER BY full_name");
   $all_unassigned = $unassigned_q ? $unassigned_q->fetch_all(MYSQLI_ASSOC) : [];
 }
 
@@ -59,27 +43,26 @@ if ($is_admin) {
   $members_q = $conn->query("
         SELECT u.id, u.first_name, u.mid_name, u.last_name,
                CONCAT_WS(' ', u.first_name, u.mid_name, u.last_name) AS full_name,
-               u.student_id, u.role, u.section, u.created_at,
-               s.id AS section_db_id, s.name AS section_name, s.course AS program,
+               u.student_id, u.role, u.section_id, u.created_at,
+               s.id AS section_db_id, s.name AS section_name, s.program,
                CASE WHEN s.manager_id = u.id THEN 1 ELSE 0 END AS is_manager
         FROM users u
-        LEFT JOIN sections s ON s.name = u.section
-        WHERE u.section IS NOT NULL AND u.section != ''
-        ORDER BY u.section, u.first_name
+        JOIN sections s ON s.id = u.section_id
+        ORDER BY s.name, u.first_name
     ");
 } else {
   $members_q = $conn->prepare("
         SELECT u.id, u.first_name, u.mid_name, u.last_name,
                CONCAT_WS(' ', u.first_name, u.mid_name, u.last_name) AS full_name,
-               u.student_id, u.role, u.section, u.created_at,
-               s.id AS section_db_id, s.name AS section_name, s.course AS program,
+               u.student_id, u.role, u.section_id, u.created_at,
+               s.id AS section_db_id, s.name AS section_name, s.program,
                CASE WHEN s.manager_id = u.id THEN 1 ELSE 0 END AS is_manager
         FROM users u
-        LEFT JOIN sections s ON s.name = u.section
-        WHERE u.section = ?
+        JOIN sections s ON s.id = u.section_id
+        WHERE u.section_id = ?
         ORDER BY u.first_name
     ");
-  $members_q->bind_param("s", $my_section);
+  $members_q->bind_param("i", $my_section);
   $members_q->execute();
   $members_q = $members_q->get_result();
 }
@@ -201,7 +184,8 @@ function initials(string $name): string
                         <?php endif; ?>
                       </div>
                       <div class="member-meta"><?= htmlspecialchars($member['student_id'] ?? '—') ?> ·
-                        <?= htmlspecialchars($member['role'] ?? 'Student') ?></div>
+                        <?= htmlspecialchars($member['role'] ?? 'Student') ?>
+                      </div>
                     </div>
                   </div>
                 <?php endforeach; ?>

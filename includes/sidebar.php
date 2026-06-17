@@ -139,7 +139,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
                     </p>
 
                     <p class="mb-0 text-muted" style="font-size:12px;">
-                        <?= isset($_SESSION['section']) ? htmlspecialchars($_SESSION['section']) : '' ?>
+                        <?= isset($_SESSION['section_clean']) ? htmlspecialchars($_SESSION['section_clean']) : '' ?>
                     </p>
                 </div>
             </div>

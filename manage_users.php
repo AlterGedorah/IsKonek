@@ -11,20 +11,13 @@ if (!$is_admin) {
 
 // UPDATED: Added course/program, year, and section to the selection fields
 $users_query = $conn->query("
-    SELECT id, 
-           first_name, 
-           mid_name, 
-           last_name, 
-           CONCAT_WS(' ', first_name, mid_name, last_name) AS full_name,
-           email, 
-           student_id, 
-           role, 
-           program,
-           year,
-           section,
-           created_at 
-    FROM users 
-    ORDER BY created_at DESC
+    SELECT u.id, u.first_name, u.mid_name, u.last_name, 
+           CONCAT_WS(' ', u.first_name, u.mid_name, u.last_name) AS full_name,
+           u.email, u.student_id, u.role, u.section_id, u.created_at,
+           s.program, s.year, s.section, s.name AS section_name
+    FROM users u
+    LEFT JOIN sections s ON u.section_id = s.id
+    ORDER BY u.created_at DESC
 ");
 $users = $users_query->fetch_all(MYSQLI_ASSOC);
 
