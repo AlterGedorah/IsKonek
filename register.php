@@ -15,15 +15,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $last_name    = trim($_POST['lname']        ?? '');
     $email        = trim($_POST['email']        ?? '');
     $student_id   = trim($_POST['student_id']   ?? '');
-    $section_name = trim($_POST['section_name'] ?? '');
+    $course       = trim($_POST['course']       ?? '');
+    $year_level   = trim($_POST['year_level']   ?? '');
+    $section_num  = trim($_POST['section_num']  ?? '');
     $password     = $_POST['password']          ?? '';
     $confirm      = $_POST['confirm_password']  ?? '';
 
-    // Resolve section_id by matching the typed section name (case-insensitive)
+    $valid_courses = ['BSIT', 'BSCS', 'BSIS'];
+
+    // Resolve section_id by matching course (program) + year + section number
     $section_id = 0;
-    if ($section_name !== '') {
-        $sec_lookup = $conn->prepare("SELECT id FROM sections WHERE name = ? LIMIT 1");
-        $sec_lookup->bind_param("s", $section_name);
+    $has_section_input = ($course !== '' || $year_level !== '' || $section_num !== '');
+    if ($course !== '' && $year_level !== '' && $section_num !== '' && ctype_digit($year_level) && ctype_digit($section_num)) {
+        $sec_lookup = $conn->prepare("SELECT id FROM sections WHERE program = ? AND year = ? AND section = ? LIMIT 1");
+        $sec_lookup->bind_param("sii", $course, $year_level, $section_num);
         $sec_lookup->execute();
         $sec_lookup_row = $sec_lookup->get_result()->fetch_assoc();
         $sec_lookup->close();
@@ -40,8 +45,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Password must be at least 8 characters.';
     } elseif ($password !== $confirm) {
         $error = 'Passwords do not match.';
-    } elseif ($section_name !== '' && $section_id === 0) {
-        $error = 'Section not found. Please check the spelling (e.g. "BSIT 2-1").';
+    } elseif ($course !== '' && !in_array($course, $valid_courses, true)) {
+        $error = 'Please select a valid course.';
+    } elseif (($year_level !== '' && !ctype_digit($year_level)) || ($section_num !== '' && !ctype_digit($section_num))) {
+        $error = 'Year and Section must be numbers.';
+    } elseif ($has_section_input && $section_id === 0) {
+        $error = 'No matching section found for the Course, Year, and Section you entered.';
     } else {
         $check = $conn->prepare("SELECT id FROM users WHERE email = ?");
         $check->bind_param("s", $email);
@@ -185,9 +194,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           </div>
 
           <div>
-            <label class="form-label small fw-medium">Section</label>
-            <input type="text" name="section_name" class="form-control" placeholder="e.g. BSIT 2-1"
-                   value="<?= htmlspecialchars($_POST['section_name'] ?? '') ?>">
+            <label class="form-label small fw-medium">Course</label>
+            <select name="course" class="form-select">
+              <option value="">— Select course —</option>
+              <option value="BSIT" <?= (($_POST['course'] ?? '') === 'BSIT') ? 'selected' : '' ?>>BSIT</option>
+              <option value="BSCS" <?= (($_POST['course'] ?? '') === 'BSCS') ? 'selected' : '' ?>>BSCS</option>
+              <option value="BSIS" <?= (($_POST['course'] ?? '') === 'BSIS') ? 'selected' : '' ?>>BSIS</option>
+            </select>
+          </div>
+
+          <div class="row g-2">
+            <div class="col-6">
+              <label class="form-label small fw-medium">Year</label>
+              <input type="number" name="year_level" class="form-control" placeholder="e.g. 2" min="1" max="6"
+                     value="<?= htmlspecialchars($_POST['year_level'] ?? '') ?>">
+            </div>
+            <div class="col-6">
+              <label class="form-label small fw-medium">Section</label>
+              <input type="number" name="section_num" class="form-control" placeholder="e.g. 1" min="1"
+                     value="<?= htmlspecialchars($_POST['section_num'] ?? '') ?>">
+            </div>
           </div>
         </div>
 
