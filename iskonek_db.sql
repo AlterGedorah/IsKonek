@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jun 17, 2026 at 08:14 AM
+-- Generation Time: Jun 17, 2026 at 09:20 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -20,9 +20,7 @@ SET time_zone = "+00:00";
 --
 -- Database: `iskonek_db`
 --
-DROP DATABASE IF EXISTS `iskonek_db`;
-CREATE DATABASE `iskonek_db`;
-USE `iskonek_db`;
+
 -- --------------------------------------------------------
 
 --
@@ -275,6 +273,7 @@ CREATE TABLE `users` (
   `last_name` varchar(120) NOT NULL,
   `email` varchar(160) NOT NULL,
   `student_id` varchar(30) NOT NULL,
+  `section_id` int(11) DEFAULT NULL,
   `role` varchar(80) DEFAULT 'Student',
   `password` varchar(255) NOT NULL,
   `avatar` varchar(255) DEFAULT NULL,
@@ -285,13 +284,13 @@ CREATE TABLE `users` (
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `first_name`, `mid_name`, `last_name`, `email`, `student_id`, `role`, `password`, `avatar`, `created_at`) VALUES
-(1, 'Ryan Pol Malabanan', NULL, '', 'ryan@school.edu.ph', '2022-10234', 'Student', '$2y$12$n4XRSfVJ4c3P5bQ/2fKzH.4q6aA1RY9kGwkl3tD.xUkdUfyF5jAoG', NULL, '2026-06-05 01:44:44'),
-(3, 'Calyx Warden', NULL, '', 'calyxwarden0315@gmail.com', '2024-00502-ST-0', 'Admin', 'pogiako123', NULL, '2026-06-05 01:58:39'),
-(5, 'Gab', NULL, '', 'gab@pup.com', '2024-00030-ST-0', 'admin', '$2y$10$w4U37CLzMUnGkxpYbv9nzuyRJFtaJo/DwhRkHJ0/EsjKnhGi90sci', NULL, '2026-06-10 03:42:21'),
-(6, 'Juan', NULL, '', 'juan@pup.com', '2022-00030-ST-0', 'Student', '$2y$10$c66O0eeHta8EhP6TvMB.h.oQIRLPx14HYNVhY6Ik5vRcYhI7IfCgC', NULL, '2026-06-10 04:04:07'),
-(7, 'Edward', 'I.', 'Guevarra', 'edward.guevarra42@gmail.com', '2024', 'Student', '$2y$10$sSMP94tvMbMEo.q6ME1s6.ANdi4hcyTk1LfPr.klMrfuYbDnx0RBq', NULL, '2026-06-17 04:36:45'),
-(8, 'calyx', 'd.', 'seloso', 'calyxseloso@gmail.com', '2026', 'Student', '$2y$10$NQIxfAWGCHMvQleH551Sru3nZz3z/Xjfj7Mkj.5VDurc14TmgtKWe', NULL, '2026-06-17 04:43:19');
+INSERT INTO `users` (`id`, `first_name`, `mid_name`, `last_name`, `email`, `student_id`, `section_id`, `role`, `password`, `avatar`, `created_at`) VALUES
+(1, 'Ryan Pol Malabanan', NULL, '', 'ryan@school.edu.ph', '2022-10234', NULL, 'Student', '$2y$12$n4XRSfVJ4c3P5bQ/2fKzH.4q6aA1RY9kGwkl3tD.xUkdUfyF5jAoG', NULL, '2026-06-05 01:44:44'),
+(3, 'Calyx Warden', NULL, '', 'calyxwarden0315@gmail.com', '2024-00502-ST-0', NULL, 'Admin', 'pogiako123', NULL, '2026-06-05 01:58:39'),
+(5, 'Gab', NULL, '', 'gab@pup.com', '2024-00030-ST-0', NULL, 'admin', '$2y$10$w4U37CLzMUnGkxpYbv9nzuyRJFtaJo/DwhRkHJ0/EsjKnhGi90sci', NULL, '2026-06-10 03:42:21'),
+(6, 'Juan', NULL, '', 'juan@pup.com', '2022-00030-ST-0', NULL, 'Student', '$2y$10$c66O0eeHta8EhP6TvMB.h.oQIRLPx14HYNVhY6Ik5vRcYhI7IfCgC', NULL, '2026-06-10 04:04:07'),
+(7, 'Edward', 'I.', 'Guevarra', 'edward.guevarra42@gmail.com', '2024', NULL, 'Student', '$2y$10$sSMP94tvMbMEo.q6ME1s6.ANdi4hcyTk1LfPr.klMrfuYbDnx0RBq', NULL, '2026-06-17 04:36:45'),
+(8, 'calyx', 'd.', 'seloso', 'calyxseloso@gmail.com', '2026', NULL, 'Student', '$2y$10$NQIxfAWGCHMvQleH551Sru3nZz3z/Xjfj7Mkj.5VDurc14TmgtKWe', NULL, '2026-06-17 04:43:19');
 
 --
 -- Indexes for dumped tables
@@ -402,7 +401,8 @@ ALTER TABLE `tasks`
 --
 ALTER TABLE `users`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `email` (`email`);
+  ADD UNIQUE KEY `email` (`email`),
+  ADD KEY `fk_user_section` (`section_id`);
 
 --
 -- AUTO_INCREMENT for dumped tables
@@ -575,6 +575,12 @@ ALTER TABLE `section_subjects`
 ALTER TABLE `tasks`
   ADD CONSTRAINT `tasks_ibfk_1` FOREIGN KEY (`subject_id`) REFERENCES `subjects` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `tasks_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `users`
+--
+ALTER TABLE `users`
+  ADD CONSTRAINT `fk_user_section` FOREIGN KEY (`section_id`) REFERENCES `sections` (`id`) ON DELETE SET NULL;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

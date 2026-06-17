@@ -60,9 +60,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $hashed   = password_hash($password, PASSWORD_BCRYPT);
             $role_str = 'Student';
+            $section_id_param = $section_id > 0 ? $section_id : null;
 
-            $stmt = $conn->prepare("INSERT INTO users (first_name, mid_name, last_name, email, student_id, role, password, created_at) VALUES (?,?,?,?,?,?,?,NOW())");
-            $stmt->bind_param("sssssss", $first_name, $mid_name, $last_name, $email, $student_id, $role_str, $hashed);
+            $stmt = $conn->prepare("INSERT INTO users (first_name, mid_name, last_name, email, student_id, section_id, role, password, created_at) VALUES (?,?,?,?,?,?,?,?,NOW())");
+            $stmt->bind_param("sssssiss", $first_name, $mid_name, $last_name, $email, $student_id, $section_id_param, $role_str, $hashed);
 
             if ($stmt->execute()) {
                 $new_user_id = $conn->insert_id;
