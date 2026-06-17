@@ -9,19 +9,28 @@ if (isLoggedIn()) {
 
 $error = '';
 
-// Fetch sections for dropdown
-$sections_q = $conn->query("SELECT id, name, program, year, section, school_year FROM sections ORDER BY name");
-$all_sections = $sections_q ? $sections_q->fetch_all(MYSQLI_ASSOC) : [];
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $first_name = trim($_POST['fname']      ?? '');
-    $mid_name   = trim($_POST['mname']      ?? '');
-    $last_name  = trim($_POST['lname']      ?? '');
-    $email      = trim($_POST['email']      ?? '');
-    $student_id = trim($_POST['student_id'] ?? '');
-    $section_id = (int)($_POST['section_id']?? 0);
-    $password   = $_POST['password']        ?? '';
-    $confirm    = $_POST['confirm_password']?? '';
+    $first_name   = trim($_POST['fname']        ?? '');
+    $mid_name     = trim($_POST['mname']        ?? '');
+    $last_name    = trim($_POST['lname']        ?? '');
+    $email        = trim($_POST['email']        ?? '');
+    $student_id   = trim($_POST['student_id']   ?? '');
+    $section_name = trim($_POST['section_name'] ?? '');
+    $password     = $_POST['password']          ?? '';
+    $confirm      = $_POST['confirm_password']  ?? '';
+
+    // Resolve section_id by matching the typed section name (case-insensitive)
+    $section_id = 0;
+    if ($section_name !== '') {
+        $sec_lookup = $conn->prepare("SELECT id FROM sections WHERE name = ? LIMIT 1");
+        $sec_lookup->bind_param("s", $section_name);
+        $sec_lookup->execute();
+        $sec_lookup_row = $sec_lookup->get_result()->fetch_assoc();
+        $sec_lookup->close();
+        if ($sec_lookup_row) {
+            $section_id = (int)$sec_lookup_row['id'];
+        }
+    }
 
     if (empty($first_name) || empty($last_name) || empty($email) || empty($student_id) || empty($password)) {
         $error = 'Please fill in all required fields.';
@@ -31,6 +40,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Password must be at least 8 characters.';
     } elseif ($password !== $confirm) {
         $error = 'Passwords do not match.';
+    } elseif ($section_name !== '' && $section_id === 0) {
+        $error = 'Section not found. Please check the spelling (e.g. "BSIT 2-1").';
     } else {
         $check = $conn->prepare("SELECT id FROM users WHERE email = ?");
         $check->bind_param("s", $email);
@@ -175,14 +186,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
           <div>
             <label class="form-label small fw-medium">Section</label>
-            <select name="section_id" class="form-select">
-              <option value="">— Select your section —</option>
-              <?php foreach ($all_sections as $sec): ?>
-                <option value="<?= $sec['id'] ?>" <?= ((int)($_POST['section_id'] ?? 0) === (int)$sec['id']) ? 'selected' : '' ?>>
-                  <?= htmlspecialchars($sec['name']) ?> — <?= htmlspecialchars($sec['program']) ?> <?= $sec['year'] ?>-<?= $sec['section'] ?> (<?= htmlspecialchars($sec['school_year']) ?>)
-                </option>
-              <?php endforeach; ?>
-            </select>
+            <input type="text" name="section_name" class="form-control" placeholder="e.g. BSIT 2-1"
+                   value="<?= htmlspecialchars($_POST['section_name'] ?? '') ?>">
           </div>
         </div>
 
