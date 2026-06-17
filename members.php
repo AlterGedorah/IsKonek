@@ -20,13 +20,15 @@ $me_q->execute();
 $me = $me_q->get_result()->fetch_assoc();
 $me_q->close();
 
-$my_section = $me['section_id'] ?? null;
+$my_section_id = $me['section_id'] ?? null;
+$my_section_name = $me['section_name'] ?? ''; // New var for display
 
 // --- For admins: fetch all sections for the "add member" feature ---
 $all_sections = [];
 $all_unassigned = [];
 if ($is_admin) {
-  $sec_q = $conn->query("SELECT id, name, course AS program FROM sections ORDER BY name");
+  // Use 'program' not 'course'
+  $sec_q = $conn->query("SELECT id, name, program FROM sections ORDER BY name");
   $all_sections = $sec_q ? $sec_q->fetch_all(MYSQLI_ASSOC) : [];
 
   // Users without a section
@@ -38,7 +40,6 @@ if ($is_admin) {
 }
 
 // Build members list per section
-// FIXED: Added CONCAT_WS query logic to properly produce 'full_name' for rows matching frontend array hooks
 if ($is_admin) {
   $members_q = $conn->query("
         SELECT u.id, u.first_name, u.mid_name, u.last_name,
@@ -62,7 +63,7 @@ if ($is_admin) {
         WHERE u.section_id = ?
         ORDER BY u.first_name
     ");
-  $members_q->bind_param("i", $my_section);
+  $members_q->bind_param("i", $my_section_id);
   $members_q->execute();
   $members_q = $members_q->get_result();
 }
@@ -72,7 +73,8 @@ $members_raw = $members_q ? $members_q->fetch_all(MYSQLI_ASSOC) : [];
 // Group by section
 $sections_map = [];
 foreach ($members_raw as $m) {
-  $key = $m['section'] ?: 'Unknown';
+  // Use section_name instead of section
+  $key = $m['section_name'] ?: 'Unknown';
   $sections_map[$key][] = $m;
 }
 
@@ -125,8 +127,8 @@ function initials(string $name): string
             <p class="text-muted mb-0" style="font-size:13px;">
               <?php if ($is_admin): ?>
                 All sections and their members
-              <?php elseif ($my_section): ?>
-                Your classmates in <strong><?= htmlspecialchars($my_section) ?></strong>
+              <?php elseif ($my_section_id): ?>
+                Your classmates in <strong><?= htmlspecialchars($my_section_name) ?></strong>
               <?php else: ?>
                 You haven't been assigned to a section yet.
               <?php endif; ?>

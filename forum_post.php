@@ -12,13 +12,18 @@ if (!$post_id) {
 }
 
 // Increment view count
-$conn->query("UPDATE forum_posts SET views = views + 1 WHERE id = $post_id");
-
+if (!isset($_SESSION['viewed_posts'])) {
+    $_SESSION['viewed_posts'] = [];
+}
+if (!in_array($post_id, $_SESSION['viewed_posts'])) {
+    $conn->query("UPDATE forum_posts SET views = views + 1 WHERE id = $post_id");
+    $_SESSION['viewed_posts'][] = $post_id;
+}
 // Get post + author info
 $post_query = $conn->prepare("
     SELECT fp.id, fp.title, fp.body, fp.views, fp.created_at,
            fp.user_id AS author_id,
-           u.full_name, u.role,
+           CONCAT_WS(' ', u.first_name, u.mid_name, u.last_name) AS full_name, u.role,
            s.id AS subject_id, s.code AS subject_code, s.name AS subject_name, s.color AS subject_color
     FROM forum_posts fp
     JOIN users u ON u.id = fp.user_id
@@ -46,7 +51,7 @@ if ($enroll_check->get_result()->num_rows === 0) {
 // Get replies
 $replies_query = $conn->prepare("
     SELECT fr.id, fr.body, fr.created_at,
-           u.id AS user_id, u.full_name, u.role
+           u.id AS user_id, CONCAT_WS(' ', u.first_name, u.mid_name, u.last_name) AS full_name, u.role
     FROM forum_replies fr
     JOIN users u ON u.id = fr.user_id
     WHERE fr.post_id = ?
