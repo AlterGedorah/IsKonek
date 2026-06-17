@@ -3,14 +3,63 @@ require_once 'includes/config.php';
 require_once 'includes/auth.php';
 requireLogin();
 
-// $is_admin = strtolower($_SESSION['role'] ?? '') === 'admin';
-// if (!$is_admin) {
-//     header('Location: dashboard.php');
-//     exit();
-// }
+// Bulk AJAX handler
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'enroll_section_bulk') {
+    header('Content-Type: application/json');
+    $subj_ids = json_decode($_POST['subject_ids'] ?? '[]');
+    $sec_id  = (int)($_POST['section_id'] ?? 0);
+
+    if (!empty($subj_ids) && $sec_id > 0) {
+        $ins_ss = $conn->prepare("INSERT IGNORE INTO section_subjects (section_id, subject_id) VALUES (?, ?)");
+        
+        $u_stmt = $conn->prepare("SELECT id FROM users WHERE section_id = ?");
+        $u_stmt->bind_param("i", $sec_id);
+        $u_stmt->execute();
+        $users = $u_stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $u_stmt->close();
+
+        $en_stmt = $conn->prepare("INSERT IGNORE INTO enrollments (user_id, subject_id) VALUES (?, ?)");
+
+        foreach ($subj_ids as $sid) {
+            $sid = (int)$sid;
+            if ($sid > 0) {
+                $ins_ss->bind_param("ii", $sec_id, $sid);
+                $ins_ss->execute();
+                if (!empty($users)) {
+                    foreach ($users as $u) {
+                        $en_stmt->bind_param("ii", $u['id'], $sid);
+                        $en_stmt->execute();
+                    }
+                }
+            }
+        }
+        if(isset($ins_ss)) $ins_ss->close();
+        if(isset($en_stmt)) $en_stmt->close();
+
+        echo json_encode(['success' => true]);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Invalid ID']);
+    }
+    exit();
+}
 
 $subjects_query = $conn->query("SELECT * FROM subjects ORDER BY code");
 $subjects = $subjects_query->fetch_all(MYSQLI_ASSOC);
+
+$uid = $_SESSION['user_id'];
+$sec_stmt = $conn->prepare("
+    SELECT u.section_id, s.name 
+    FROM users u 
+    LEFT JOIN sections s ON u.section_id = s.id 
+    WHERE u.id = ?
+");
+$sec_stmt->bind_param("i", $uid);
+$sec_stmt->execute();
+$my_sec = $sec_stmt->get_result()->fetch_assoc();
+$sec_stmt->close();
+
+$my_section_id = $my_sec['section_id'] ?? null;
+$my_section_name = $my_sec['name'] ?? '';
 
 $color_options = [
     '#33b77a', '#4a90d9', '#d23c3c', '#f5a623',
@@ -27,154 +76,9 @@ $color_options = [
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-  <link href="assets/css/style.css" rel="stylesheet">
+  <link href="assets/css/manage_subjects.css" rel="stylesheet">
   <link rel="icon" href="assets/images/Icon.png">
-  <style>
-    .subjects-panel {
-      background: white;
-      border: 1px solid var(--border-color);
-      border-radius: 20px;
-      overflow: hidden;
-    }
 
-    .subjects-panel-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 18px 24px;
-      border-bottom: 1px solid var(--border-color);
-    }
-
-    .subjects-panel-title {
-      font-family: var(--font-heading);
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--text-primary);
-      margin: 0;
-    }
-
-    .btn-new-subject {
-      background-color: var(--accent-green);
-      color: white;
-      border: none;
-      border-radius: 10px;
-      padding: 8px 18px;
-      font-size: 14px;
-      font-weight: 500;
-      font-family: var(--font-heading);
-      transition: background-color 0.15s;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .btn-new-subject:hover { background-color: #28a06a; color: white; }
-
-    .subject-table-header {
-      display: grid;
-      grid-template-columns: 110px 1fr 200px 60px 110px;
-      padding: 8px 24px;
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--text-muted);
-      letter-spacing: 0.3px;
-      border-bottom: 1px solid var(--border-color);
-      background: #fafafa;
-    }
-
-    .subject-row {
-      display: grid;
-      grid-template-columns: 110px 1fr 200px 60px 110px;
-      align-items: center;
-      padding: 14px 24px;
-      border-bottom: 1px solid var(--border-color);
-      transition: background-color 0.15s ease;
-    }
-
-    .subject-row:last-child { border-bottom: none; }
-    .subject-row:hover { background-color: #f9fffe; }
-
-    .subject-code {
-      font-family: var(--font-heading);
-      font-weight: 600;
-      font-size: 13px;
-      color: var(--text-primary);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .subject-color-dot {
-      width: 10px; height: 10px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-
-    .subject-name { font-size: 14px; color: var(--text-primary); }
-    .subject-instructor { font-size: 13px; color: var(--text-secondary); }
-    .subject-units { font-size: 13px; color: var(--text-muted); text-align: center; }
-
-    .subject-actions {
-      display: flex;
-      gap: 6px;
-      justify-content: flex-end;
-    }
-
-    .btn-edit-subj, .btn-delete-subj {
-      background: none;
-      border: none;
-      padding: 5px 8px;
-      border-radius: 8px;
-      font-size: 13px;
-      cursor: pointer;
-      transition: background 0.15s, color 0.15s;
-    }
-
-    .btn-edit-subj { color: var(--text-muted); }
-    .btn-edit-subj:hover { background: #eaf6f0; color: var(--accent-green); }
-    .btn-delete-subj { color: var(--text-muted); }
-    .btn-delete-subj:hover { background: #fff0f0; color: var(--accent-red); }
-
-    .subjects-empty {
-      padding: 60px 24px;
-      text-align: center;
-      color: var(--text-muted);
-    }
-
-    .subjects-empty i { font-size: 40px; margin-bottom: 12px; display: block; opacity: 0.4; }
-
-    .color-picker { display: flex; gap: 8px; flex-wrap: wrap; }
-
-    .color-swatch {
-      width: 28px; height: 28px;
-      border-radius: 50%;
-      cursor: pointer;
-      border: 3px solid transparent;
-      transition: border-color 0.15s, transform 0.15s;
-    }
-
-    .color-swatch:hover { transform: scale(1.15); }
-    .color-swatch.selected { border-color: var(--text-primary); }
-
-    .modal-content {
-      border-radius: 20px !important;
-      border: 1px solid var(--border-color) !important;
-    }
-
-    .form-control:focus, .form-select:focus {
-      border-color: var(--accent-green);
-      box-shadow: 0 0 0 3px rgba(51,183,122,0.15);
-    }
-
-    @media (max-width: 768px) {
-      .subject-table-header,
-      .subject-row { grid-template-columns: 90px 1fr 90px; }
-      .subject-table-header span:nth-child(3),
-      .subject-table-header span:nth-child(4),
-      .subject-row > *:nth-child(3),
-      .subject-row > *:nth-child(4) { display: none; }
-    }
-  </style>
 </head>
 <body>
 <div class="app-wrapper">
@@ -191,11 +95,25 @@ $color_options = [
         <p class="hero-sub text-muted">Add, edit, or remove subjects and their assigned professors.</p>
       </div>
 
+      <?php if ($my_section_id): ?>
+      <div class="mb-4 p-4" style="background: white; border: 1px solid var(--border-color); border-radius: 20px;">
+        <h6 class="fw-semibold mb-3" style="font-family: var(--font-heading);">
+          <i class="bi bi-people-fill text-muted me-2"></i>Enroll Section: <?= htmlspecialchars($my_section_name) ?>
+        </h6>
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+          <p class="text-muted small mb-0 me-2">Select subjects from the list below and click:</p>
+          <button class="btn text-white" style="background: var(--accent-green); border-radius: 10px; font-weight: 500;" onclick="enrollSelected(<?= $my_section_id ?>)">
+            <i class="bi bi-box-arrow-in-right me-1"></i> Enroll Selected
+          </button>
+        </div>
+        <div id="enrollStatus" class="mt-2 small" style="display:none;"></div>
+      </div>
+      <?php endif; ?>
+
       <div class="subjects-panel">
         <div class="subjects-panel-header">
           <p class="subjects-panel-title">All Subjects (<?= count($subjects) ?>)</p>
-          <button class="btn-new-subject" data-bs-toggle="modal" data-bs-target="#subjectModal"
-                  onclick="openAddModal()">
+          <button class="btn-new-subject" data-bs-toggle="modal" data-bs-target="#subjectModal" onclick="openAddModal()">
             <i class="bi bi-plus-lg"></i> Add Subject
           </button>
         </div>
@@ -208,6 +126,7 @@ $color_options = [
           </div>
         <?php else: ?>
           <div class="subject-table-header">
+            <span><input class="form-check-input" type="checkbox" id="selectAllSubj" onchange="toggleAllSubj(this)"></span>
             <span>Code</span>
             <span>Subject Name</span>
             <span>Professor</span>
@@ -217,6 +136,7 @@ $color_options = [
 
           <?php foreach ($subjects as $subj): ?>
             <div class="subject-row">
+              <div><input class="form-check-input subj-cb" type="checkbox" value="<?= $subj['id'] ?>"></div>
               <div class="subject-code">
                 <span class="subject-color-dot" style="background:<?= htmlspecialchars($subj['color']) ?>;"></span>
                 <?= htmlspecialchars($subj['code']) ?>
@@ -225,14 +145,8 @@ $color_options = [
               <div class="subject-instructor"><?= htmlspecialchars($subj['instructor'] ?? '—') ?></div>
               <div class="subject-units" style="text-align:center;"><?= (int)$subj['units'] ?></div>
               <div class="subject-actions">
-                <button class="btn-edit-subj" title="Edit"
-                        onclick='openEditModal(<?= json_encode($subj) ?>)'>
-                  <i class="bi bi-pencil"></i>
-                </button>
-                <button class="btn-delete-subj" title="Delete"
-                        onclick="confirmDelete(<?= $subj['id'] ?>, '<?= htmlspecialchars(addslashes($subj['code'])) ?>')">
-                  <i class="bi bi-trash3"></i>
-                </button>
+                <button class="btn-edit-subj" title="Edit" onclick='openEditModal(<?= json_encode($subj) ?>)'><i class="bi bi-pencil"></i></button>
+                <button class="btn-delete-subj" title="Delete" onclick="confirmDelete(<?= $subj['id'] ?>, '<?= htmlspecialchars(addslashes($subj['code'])) ?>')"><i class="bi bi-trash3"></i></button>
               </div>
             </div>
           <?php endforeach; ?>
@@ -243,7 +157,6 @@ $color_options = [
   </div>
 </div>
 
-<!-- Add / Edit Subject Modal -->
 <div class="modal fade" id="subjectModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
@@ -256,53 +169,36 @@ $color_options = [
         <form id="subjectForm">
           <input type="hidden" name="subject_id" id="field_subject_id">
           <input type="hidden" name="color" id="field_color" value="#33b77a">
-
           <div class="row g-3 mb-3">
             <div class="col-6">
               <label class="form-label small fw-medium">Subject Code</label>
-              <input type="text" name="code" id="field_code" class="form-control" required maxlength="20"
-                     placeholder="e.g. COMP 009"
-                     style="border-radius:10px;border-color:var(--border-color);">
+              <input type="text" name="code" id="field_code" class="form-control" required maxlength="20" placeholder="e.g. COMP 009" style="border-radius:10px;border-color:var(--border-color);">
             </div>
             <div class="col-3">
               <label class="form-label small fw-medium">Units</label>
-              <input type="number" name="units" id="field_units" class="form-control" required min="1" max="9" value="3"
-                     style="border-radius:10px;border-color:var(--border-color);">
+              <input type="number" name="units" id="field_units" class="form-control" required min="1" max="9" value="3" style="border-radius:10px;border-color:var(--border-color);">
             </div>
             <div class="col-3">
               <label class="form-label small fw-medium">Color</label>
               <div class="color-picker mt-1" id="colorPicker">
                 <?php foreach ($color_options as $c): ?>
-                  <span class="color-swatch <?= $c === '#33b77a' ? 'selected' : '' ?>"
-                        style="background:<?= $c ?>;"
-                        data-color="<?= $c ?>"
-                        onclick="selectColor('<?= $c ?>', this)"></span>
+                  <span class="color-swatch <?= $c === '#33b77a' ? 'selected' : '' ?>" style="background:<?= $c ?>;" data-color="<?= $c ?>" onclick="selectColor('<?= $c ?>', this)"></span>
                 <?php endforeach; ?>
               </div>
             </div>
           </div>
-
           <div class="mb-3">
             <label class="form-label small fw-medium">Subject Name</label>
-            <input type="text" name="name" id="field_name" class="form-control" required maxlength="160"
-                   placeholder="e.g. Object Oriented Programming"
-                   style="border-radius:10px;border-color:var(--border-color);">
+            <input type="text" name="name" id="field_name" class="form-control" required maxlength="160" placeholder="e.g. Object Oriented Programming" style="border-radius:10px;border-color:var(--border-color);">
           </div>
-
           <div class="mb-3">
             <label class="form-label small fw-medium">Professor / Faculty Name</label>
-            <input type="text" name="instructor" id="field_instructor" class="form-control" maxlength="120"
-                   placeholder="e.g. VELASCO, MARIENEL N."
-                   style="border-radius:10px;border-color:var(--border-color);">
+            <input type="text" name="instructor" id="field_instructor" class="form-control" maxlength="120" placeholder="e.g. VELASCO, MARIENEL N." style="border-radius:10px;border-color:var(--border-color);">
           </div>
-
           <div class="mb-4">
             <label class="form-label small fw-medium">Semester</label>
-            <input type="text" name="semester" id="field_semester" class="form-control" maxlength="40"
-                   placeholder="e.g. 2nd Sem, A.Y. 2024-25"
-                   style="border-radius:10px;border-color:var(--border-color);">
+            <input type="text" name="semester" id="field_semester" class="form-control" maxlength="40" placeholder="e.g. 2nd Sem, A.Y. 2024-25" style="border-radius:10px;border-color:var(--border-color);">
           </div>
-
           <button type="submit" class="btn-login" id="subjectSubmitBtn">Add Subject</button>
         </form>
       </div>
@@ -310,7 +206,6 @@ $color_options = [
   </div>
 </div>
 
-<!-- Delete Confirm Modal -->
 <div class="modal fade" id="deleteSubjectModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered modal-sm">
     <div class="modal-content">
@@ -338,6 +233,45 @@ document.addEventListener('DOMContentLoaded', function () {
   if (toggleBtn) toggleBtn.addEventListener('click', () => { sidebar.classList.toggle('show'); overlay?.classList.toggle('show'); });
   if (overlay)   overlay.addEventListener('click', () => { sidebar.classList.remove('show'); overlay.classList.remove('show'); });
 });
+
+function toggleAllSubj(el) {
+  document.querySelectorAll('.subj-cb').forEach(cb => cb.checked = el.checked);
+}
+
+function enrollSelected(secId) {
+  const checked = Array.from(document.querySelectorAll('.subj-cb:checked')).map(cb => cb.value);
+  const stat = document.getElementById('enrollStatus');
+
+  if (checked.length === 0) {
+    stat.style.display = 'block';
+    stat.className = 'mt-2 small text-danger fw-medium';
+    stat.textContent = 'Select at least one subject from the list below.';
+    return;
+  }
+
+  if (!confirm(`Enroll section in ${checked.length} subject(s)?`)) return;
+
+  const fd = new FormData();
+  fd.append('action', 'enroll_section_bulk');
+  fd.append('subject_ids', JSON.stringify(checked));
+  fd.append('section_id', secId);
+
+  fetch('manage_subjects.php', { method: 'POST', body: fd })
+    .then(r => r.json())
+    .then(data => {
+      stat.style.display = 'block';
+      if (data.success) {
+        stat.className = 'mt-2 small text-success fw-medium';
+        stat.textContent = `${checked.length} subjects enrolled successfully!`;
+        document.querySelectorAll('.subj-cb').forEach(cb => cb.checked = false);
+        document.getElementById('selectAllSubj').checked = false;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        stat.className = 'mt-2 small text-danger fw-medium';
+        stat.textContent = data.message || 'Error enroll.';
+      }
+    });
+}
 
 function selectColor(color, el) {
   document.getElementById('field_color').value = color;
@@ -392,10 +326,6 @@ document.getElementById('subjectForm').addEventListener('submit', function (e) {
         errEl.textContent = data.message || 'Something went wrong.';
         errEl.style.display = 'block';
       }
-    })
-    .catch(() => {
-      errEl.textContent = 'Network error. Please try again.';
-      errEl.style.display = 'block';
     });
 });
 
@@ -420,11 +350,6 @@ document.getElementById('confirmDeleteBtn').addEventListener('click', function (
       deleteModal.hide();
       if (data.success) window.location.reload();
       else alert(data.message || 'Failed to delete.');
-      pendingDeleteId = null;
-    })
-    .catch(() => {
-      deleteModal.hide();
-      alert('Network error.');
       pendingDeleteId = null;
     });
 });

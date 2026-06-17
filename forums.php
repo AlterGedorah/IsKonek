@@ -24,7 +24,7 @@ $filter_subject_id = isset($_GET['subject']) ? (int)$_GET['subject'] : 0;
 if ($filter_subject_id > 0) {
     $posts_query = $conn->prepare("
         SELECT fp.id, fp.title, fp.views, fp.created_at,
-               u.first_name, u.role,
+               CONCAT_WS(' ', u.first_name, u.mid_name, u.last_name) AS full_name, u.role,
                s.code AS subject_code, s.color AS subject_color,
                COUNT(DISTINCT fr.id) AS reply_count
         FROM forum_posts fp
@@ -40,7 +40,7 @@ if ($filter_subject_id > 0) {
     // All posts from enrolled subjects only
     $posts_query = $conn->prepare("
         SELECT fp.id, fp.title, fp.views, fp.created_at,
-               u.first_name, u.role,
+               CONCAT_WS(' ', u.first_name, u.mid_name, u.last_name) AS full_name, u.role,
                s.code AS subject_code, s.color AS subject_color,
                COUNT(DISTINCT fr.id) AS reply_count
         FROM forum_posts fp
@@ -59,7 +59,7 @@ $posts = $posts_query->get_result()->fetch_all(MYSQLI_ASSOC);
 // Total post count for badge
 $total_posts = count($posts);
 
-// Avatar color palette (deterministic by name)
+// Avatar color palette
 function avatarColor(string $name): string {
     $colors = ['#33b77a','#4a90d9','#d23c3c','#f5a623','#9b59b6','#1abc9c','#e67e22','#2980b9'];
     return $colors[abs(crc32($name)) % count($colors)];
@@ -67,8 +67,9 @@ function avatarColor(string $name): string {
 
 function initials(string $name): string {
     $parts = explode(' ', trim($name));
+    if (empty($parts) || $parts[0] === '') return '?';
     $i = strtoupper(substr($parts[0], 0, 1));
-    if (count($parts) > 1) $i .= strtoupper(substr(end($parts), 0, 1));
+    if (count($parts) > 1 && !empty(end($parts))) $i .= strtoupper(substr(end($parts), 0, 1));
     return $i;
 }
 
@@ -94,244 +95,39 @@ function timeAgo(string $datetime): string {
   <link href="assets/css/style.css" rel="stylesheet">
   <link rel="icon" href="assets/images/Icon.png">
   <style>
-    /* ── Forum Layout ── */
-    .forum-layout {
-      display: grid;
-      grid-template-columns: 200px 1fr;
-      gap: 24px;
-      align-items: start;
-    }
-
-    /* ── Categories Sidebar ── */
-    .forum-categories {
-      position: sticky;
-      top: calc(var(--navbar-height) + 24px);
-    }
-
-    .categories-label {
-      font-family: var(--font-heading);
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 1px;
-      color: var(--text-muted);
-      margin-bottom: 10px;
-      padding: 0 4px;
-    }
-
-    .category-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 8px 12px;
-      border-radius: 10px;
-      font-size: 14px;
-      color: var(--text-secondary);
-      text-decoration: none;
-      transition: background-color 0.15s ease;
-      cursor: pointer;
-      border: none;
-      background: none;
-      width: 100%;
-      text-align: left;
-    }
-
-    .category-item:hover {
-      background-color: var(--hover-bg);
-      color: var(--text-primary);
-    }
-
-    .category-item.active {
-      background-color: var(--hover-bg);
-      color: var(--text-primary);
-      font-weight: 500;
-    }
-
-    .category-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      flex-shrink: 0;
-      margin-right: 8px;
-    }
-
-    /* ── Forum Panel ── */
-    .forum-panel {
-      background: white;
-      border: 1px solid var(--border-color);
-      border-radius: 20px;
-      overflow: hidden;
-    }
-
-    .forum-panel-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 18px 24px;
-      border-bottom: 1px solid var(--border-color);
-    }
-
-    .forum-panel-title {
-      font-family: var(--font-heading);
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--text-primary);
-      margin: 0;
-    }
-
-    /* ── Thread Row ── */
-    .thread-table-header {
-      display: grid;
-      grid-template-columns: 1fr 90px 70px;
-      padding: 8px 24px;
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--text-muted);
-      letter-spacing: 0.3px;
-      border-bottom: 1px solid var(--border-color);
-      background: #fafafa;
-    }
-
-    .thread-row {
-      display: grid;
-      grid-template-columns: 1fr 90px 70px;
-      align-items: center;
-      padding: 14px 24px;
-      border-bottom: 1px solid var(--border-color);
-      text-decoration: none;
-      color: inherit;
-      transition: background-color 0.15s ease;
-    }
-
-    .thread-row:last-child {
-      border-bottom: none;
-    }
-
-    .thread-row:hover {
-      background-color: #f9fffe;
-    }
-
-    .thread-avatar {
-      width: 38px;
-      height: 38px;
-      min-width: 38px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 13px;
-      font-weight: 600;
-      color: white;
-      margin-right: 14px;
-    }
-
-    .thread-title {
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--text-primary);
-      margin-bottom: 3px;
-      line-height: 1.3;
-    }
-
-    .thread-meta {
-      font-size: 12px;
-      color: var(--text-muted);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .thread-subject-badge {
-      font-size: 10px;
-      padding: 1px 7px;
-      border-radius: 20px;
-      font-weight: 600;
-      color: white;
-    }
-
-    .thread-stat {
-      text-align: center;
-    }
-
-    .thread-stat-value {
-      font-size: 18px;
-      font-weight: 500;
-      color: var(--accent-green);
-      line-height: 1;
-    }
-
-    .thread-stat-label {
-      font-size: 10px;
-      color: var(--text-muted);
-      margin-top: 2px;
-    }
-
-    .forum-empty {
-      padding: 60px 24px;
-      text-align: center;
-      color: var(--text-muted);
-    }
-
-    .forum-empty i {
-      font-size: 40px;
-      margin-bottom: 12px;
-      display: block;
-      opacity: 0.4;
-    }
-
-    /* ── New Topic Button ── */
-    .btn-new-topic {
-      background-color: var(--accent-green);
-      color: white;
-      border: none;
-      border-radius: 10px;
-      padding: 8px 18px;
-      font-size: 14px;
-      font-weight: 500;
-      font-family: var(--font-heading);
-      transition: background-color 0.15s;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .btn-new-topic:hover {
-      background-color: #28a06a;
-      color: white;
-    }
-
-    /* ── Modal ── */
-    .modal-content {
-      border-radius: 20px !important;
-      border: 1px solid var(--border-color) !important;
-    }
-
-    .form-control:focus, .form-select:focus {
-      border-color: var(--accent-green);
-      box-shadow: 0 0 0 3px rgba(51,183,122,0.15);
-    }
-
+    .forum-layout { display: grid; grid-template-columns: 200px 1fr; gap: 24px; align-items: start; }
+    .forum-categories { position: sticky; top: calc(var(--navbar-height) + 24px); }
+    .categories-label { font-family: var(--font-heading); font-size: 11px; font-weight: 600; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 10px; padding: 0 4px; }
+    .category-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-radius: 10px; font-size: 14px; color: var(--text-secondary); text-decoration: none; transition: background-color 0.15s ease; cursor: pointer; border: none; background: none; width: 100%; text-align: left; }
+    .category-item:hover { background-color: var(--hover-bg); color: var(--text-primary); }
+    .category-item.active { background-color: var(--hover-bg); color: var(--text-primary); font-weight: 500; }
+    .category-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-right: 8px; }
+    .forum-panel { background: white; border: 1px solid var(--border-color); border-radius: 20px; overflow: hidden; }
+    .forum-panel-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 24px; border-bottom: 1px solid var(--border-color); }
+    .forum-panel-title { font-family: var(--font-heading); font-size: 15px; font-weight: 600; color: var(--text-primary); margin: 0; }
+    .thread-table-header { display: grid; grid-template-columns: 1fr 90px 70px; padding: 8px 24px; font-size: 12px; font-weight: 500; color: var(--text-muted); letter-spacing: 0.3px; border-bottom: 1px solid var(--border-color); background: #fafafa; }
+    .thread-row { display: grid; grid-template-columns: 1fr 90px 70px; align-items: center; padding: 14px 24px; border-bottom: 1px solid var(--border-color); text-decoration: none; color: inherit; transition: background-color 0.15s ease; }
+    .thread-row:last-child { border-bottom: none; }
+    .thread-row:hover { background-color: #f9fffe; }
+    .thread-avatar { width: 38px; height: 38px; min-width: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: white; margin-right: 14px; }
+    .thread-title { font-size: 14px; font-weight: 500; color: var(--text-primary); margin-bottom: 3px; line-height: 1.3; }
+    .thread-meta { font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .thread-subject-badge { font-size: 10px; padding: 1px 7px; border-radius: 20px; font-weight: 600; color: white; }
+    .thread-stat { text-align: center; }
+    .thread-stat-value { font-size: 18px; font-weight: 500; color: var(--accent-green); line-height: 1; }
+    .thread-stat-label { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+    .forum-empty { padding: 60px 24px; text-align: center; color: var(--text-muted); }
+    .forum-empty i { font-size: 40px; margin-bottom: 12px; display: block; opacity: 0.4; }
+    .btn-new-topic { background-color: var(--accent-green); color: white; border: none; border-radius: 10px; padding: 8px 18px; font-size: 14px; font-weight: 500; font-family: var(--font-heading); transition: background-color 0.15s; display: flex; align-items: center; gap: 6px; }
+    .btn-new-topic:hover { background-color: #28a06a; color: white; }
+    .modal-content { border-radius: 20px !important; border: 1px solid var(--border-color) !important; }
+    .form-control:focus, .form-select:focus { border-color: var(--accent-green); box-shadow: 0 0 0 3px rgba(51,183,122,0.15); }
     @media (max-width: 768px) {
-      .forum-layout {
-        grid-template-columns: 1fr;
-      }
-      .forum-categories {
-        position: static;
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-      }
-      .category-item {
-        padding: 6px 12px;
-        width: auto;
-        border: 1px solid var(--border-color);
-      }
+      .forum-layout { grid-template-columns: 1fr; }
+      .forum-categories { position: static; display: flex; gap: 8px; flex-wrap: wrap; }
+      .category-item { padding: 6px 12px; width: auto; border: 1px solid var(--border-color); }
       .categories-label { display: none; }
-      .thread-table-header,
-      .thread-row {
-        grid-template-columns: 1fr 70px 60px;
-        padding: 12px 16px;
-      }
+      .thread-table-header, .thread-row { grid-template-columns: 1fr 70px 60px; padding: 12px 16px; }
     }
   </style>
 </head>
@@ -345,7 +141,6 @@ function timeAgo(string $datetime): string {
 
     <div class="page-body">
 
-      <!-- Hero -->
       <div class="mb-4">
         <h2 class="hero-greeting mb-1">Threaded Forums 💬</h2>
         <p class="hero-sub text-muted">Organized discussions for every subject and topic.</p>
@@ -353,15 +148,12 @@ function timeAgo(string $datetime): string {
 
       <div class="forum-layout">
 
-        <!-- Categories -->
         <aside class="forum-categories">
           <p class="categories-label">CATEGORIES</p>
 
-          <a href="forums.php"
-             class="category-item <?= $filter_subject_id === 0 ? 'active' : '' ?>">
+          <a href="forums.php" class="category-item <?= $filter_subject_id === 0 ? 'active' : '' ?>">
             <span class="d-flex align-items-center">
-              <span class="category-dot" style="background:#33b77a;"></span>
-              All Topics
+              <span class="category-dot" style="background:#33b77a;"></span> All Topics
             </span>
             <?php if ($filter_subject_id === 0): ?>
               <span class="badge rounded-pill text-white" style="background:#d23c3c;font-size:10px;"><?= $total_posts ?></span>
@@ -369,8 +161,7 @@ function timeAgo(string $datetime): string {
           </a>
 
           <?php foreach ($enrolled_subjects as $subj): ?>
-          <a href="forums.php?subject=<?= $subj['id'] ?>"
-             class="category-item <?= $filter_subject_id === (int)$subj['id'] ? 'active' : '' ?>">
+          <a href="forums.php?subject=<?= $subj['id'] ?>" class="category-item <?= $filter_subject_id === (int)$subj['id'] ? 'active' : '' ?>">
             <span class="d-flex align-items-center gap-2">
               <span class="category-dot" style="background:<?= htmlspecialchars($subj['color']) ?>;"></span>
               <?= htmlspecialchars($subj['code']) ?>
@@ -379,7 +170,6 @@ function timeAgo(string $datetime): string {
           <?php endforeach; ?>
         </aside>
 
-        <!-- Main Panel -->
         <div class="forum-panel">
           <div class="forum-panel-header">
             <p class="forum-panel-title">
@@ -411,15 +201,18 @@ function timeAgo(string $datetime): string {
 
             <?php foreach ($posts as $post): ?>
             <a href="forum_post.php?id=<?= $post['id'] ?>" class="thread-row">
-              <!-- Left: Avatar + Info -->
               <div class="d-flex align-items-center">
-                <div class="thread-avatar" style="background:<?= avatarColor($post['first_name']) ?>;">
-                  <?= initials($post['first_name']) ?>
+                <div class="thread-avatar" style="background:<?= avatarColor($post['full_name']) ?>;">
+                  <?= initials($post['full_name']) ?>
                 </div>
                 <div class="flex-grow-1 overflow-hidden">
                   <p class="thread-title text-truncate mb-1"><?= htmlspecialchars($post['title']) ?></p>
                   <div class="thread-meta">
-                    <span><?= htmlspecialchars(explode(' ', $post['first_name'])[0]) ?> <?= htmlspecialchars(explode(' ', $post['first_name'])[1][0] ?? '') ?>. &middot; <?= htmlspecialchars($post['role']) ?></span>
+                    <?php 
+                      $n_parts = explode(' ', $post['full_name']);
+                      $short_name = $n_parts[0] . (isset($n_parts[1]) ? ' ' . $n_parts[1][0] . '.' : '');
+                    ?>
+                    <span><?= htmlspecialchars($short_name) ?> &middot; <?= htmlspecialchars($post['role']) ?></span>
                     <?php if ($filter_subject_id === 0): ?>
                       <span class="thread-subject-badge" style="background:<?= htmlspecialchars($post['subject_color']) ?>;"><?= htmlspecialchars($post['subject_code']) ?></span>
                     <?php endif; ?>
@@ -428,13 +221,11 @@ function timeAgo(string $datetime): string {
                 </div>
               </div>
 
-              <!-- Replies -->
               <div class="thread-stat">
                 <div class="thread-stat-value"><?= (int)$post['reply_count'] ?></div>
                 <div class="thread-stat-label">Replies</div>
               </div>
 
-              <!-- Views -->
               <div class="thread-stat">
                 <div class="thread-stat-value" style="color:var(--text-muted);font-size:16px;"><?= (int)$post['views'] ?></div>
                 <div class="thread-stat-label">Views</div>
@@ -449,7 +240,6 @@ function timeAgo(string $datetime): string {
   </div>
 </div>
 
-<!-- New Topic Modal -->
 <div class="modal fade" id="newTopicModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
@@ -473,17 +263,13 @@ function timeAgo(string $datetime): string {
           </div>
           <div class="mb-3">
             <label class="form-label small fw-medium">Topic Title</label>
-            <input type="text" name="title" class="form-control" required maxlength="200"
-                   placeholder="e.g. What is the difference between TCP and UDP?"
-                   style="border-radius:10px;border-color:var(--border-color);">
+            <input type="text" name="title" class="form-control" required maxlength="200" placeholder="e.g. What is the difference between TCP and UDP?" style="border-radius:10px;border-color:var(--border-color);">
           </div>
           <div class="mb-4">
             <label class="form-label small fw-medium">Body <span class="text-muted fw-normal">(optional)</span></label>
-            <textarea name="body" class="form-control" rows="4"
-                      placeholder="Add more context, questions, or details..."
-                      style="border-radius:10px;border-color:var(--border-color);resize:vertical;"></textarea>
+            <textarea name="body" class="form-control" rows="4" placeholder="Add more context, questions, or details..." style="border-radius:10px;border-color:var(--border-color);resize:vertical;"></textarea>
           </div>
-          <button type="submit" class="btn-login">Post Topic</button>
+          <button type="submit" class="btn-login w-100">Post Topic</button>
         </form>
       </div>
     </div>
@@ -493,14 +279,12 @@ function timeAgo(string $datetime): string {
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-  // Sidebar toggle
   const toggleBtn = document.getElementById('sidebarToggle');
   const sidebar   = document.getElementById('sidebar');
   const overlay   = document.getElementById('sidebarOverlay');
   if (toggleBtn) toggleBtn.addEventListener('click', () => { sidebar.classList.toggle('show'); overlay?.classList.toggle('show'); });
   if (overlay)   overlay.addEventListener('click', () => { sidebar.classList.remove('show'); overlay.classList.remove('show'); });
 
-  // New topic form
   document.getElementById('newTopicForm').addEventListener('submit', function (e) {
     e.preventDefault();
     const fd = new FormData(this);
