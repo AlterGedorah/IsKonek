@@ -3,11 +3,11 @@ require_once 'includes/config.php';
 require_once 'includes/auth.php';
 requireLogin();
 
-$is_admin = strtolower($_SESSION['role'] ?? '') === 'admin';
-if (!$is_admin) {
-    header('Location: dashboard.php');
-    exit();
-}
+// $is_admin = strtolower($_SESSION['role'] ?? '') === 'admin';
+// if (!$is_admin) {
+//     header('Location: dashboard.php');
+//     exit();
+// }
 
 $subjects_query = $conn->query("SELECT * FROM subjects ORDER BY code");
 $subjects = $subjects_query->fetch_all(MYSQLI_ASSOC);

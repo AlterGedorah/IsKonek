@@ -5,11 +5,24 @@ requireLogin();
 
 $user_id = $_SESSION['user_id'];
 
-$user_query = $conn->prepare("SELECT id, first_name,mid_name,last_name, email, student_id, role, section,year, avatar FROM users WHERE id = ?");
+$user_query = $conn->prepare("SELECT id, first_name,mid_name,last_name, email, student_id, role, section_id, avatar FROM users WHERE id = ?");
 $user_query->bind_param("i", $user_id);
 $user_query->execute();
 $user = $user_query->get_result()->fetch_assoc();
 
+// $stmt = $conn->prepare("
+//     SELECT u.first_name, u.last_name, s.name AS section_name, s.program, s.year 
+//     FROM users u 
+//     LEFT JOIN sections s ON u.section_id = s.id 
+//     WHERE u.id = ?
+// ");
+// $stmt->bind_param("i", $user_id);
+// $stmt->execute();
+// $user_section = $stmt->get_result()->fetch_assoc();
+// $stmt->close();
+$user_section = $_SESSION['section_clean'];
+// Access section info:
+// echo $data['section_name'];
 
 $success = $_GET['success'] ?? '';
 $error = $_GET['error'] ?? '';
@@ -42,176 +55,9 @@ function initials(string $name): string
     rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-  <link href="assets/css/style.css" rel="stylesheet">
+  <link href="assets/css/settings.css" rel="stylesheet">
   <link rel="icon" href="assets/images/Icon.png">
-  <style>
-    .settings-layout {
-      display: grid;
-      grid-template-columns: 220px 1fr;
-      gap: 24px;
-      align-items: start;
-    }
-
-    .settings-nav {
-      position: sticky;
-      top: calc(var(--navbar-height) + 24px);
-      background: white;
-      border: 1px solid var(--border-color);
-      border-radius: 20px;
-      overflow: hidden;
-      padding: 8px;
-    }
-
-    .settings-nav-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 14px;
-      border-radius: 12px;
-      font-size: 14px;
-      color: var(--text-secondary);
-      cursor: pointer;
-      transition: background 0.15s;
-      border: none;
-      background: none;
-      width: 100%;
-      text-align: left;
-    }
-
-    .settings-nav-item:hover {
-      background: var(--hover-bg);
-      color: var(--text-primary);
-    }
-
-    .settings-nav-item.active {
-      background: var(--hover-bg);
-      color: var(--text-primary);
-      font-weight: 500;
-    }
-
-    .settings-panel {
-      background: white;
-      border: 1px solid var(--border-color);
-      border-radius: 20px;
-      overflow: hidden;
-    }
-
-    .settings-section {
-      display: none;
-      padding: 28px;
-    }
-
-    .settings-section.active {
-      display: block;
-    }
-
-    .settings-section-title {
-      font-family: var(--font-heading);
-      font-weight: 600;
-      font-size: 16px;
-      color: var(--text-primary);
-      margin-bottom: 4px;
-    }
-
-    .settings-section-desc {
-      font-size: 13px;
-      color: var(--text-muted);
-      margin-bottom: 24px;
-    }
-
-    .settings-divider {
-      border: none;
-      border-top: 1px solid var(--border-color);
-      margin: 24px 0;
-    }
-
-    .avatar-preview {
-      width: 72px;
-      height: 72px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-weight: 700;
-      font-size: 24px;
-      font-family: var(--font-heading);
-      flex-shrink: 0;
-    }
-
-    .avatar-preview img {
-      width: 72px;
-      height: 72px;
-      border-radius: 50%;
-      object-fit: cover;
-    }
-
-    .btn-upload-avatar {
-      background: none;
-      border: 1px solid var(--border-color);
-      border-radius: 10px;
-      padding: 7px 16px;
-      font-size: 13px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: background 0.15s;
-      color: var(--text-primary);
-    }
-
-    .btn-upload-avatar:hover {
-      background: var(--hover-bg);
-    }
-
-    .form-control:focus,
-    .form-select:focus {
-      border-color: var(--accent-green);
-      box-shadow: 0 0 0 3px rgba(51, 183, 122, 0.15);
-    }
-
-    .btn-save {
-      background-color: var(--accent-green);
-      color: white;
-      border: none;
-      border-radius: 10px;
-      padding: 10px 28px;
-      font-size: 14px;
-      font-weight: 500;
-      font-family: var(--font-heading);
-      transition: background-color 0.15s;
-      cursor: pointer;
-    }
-
-    .btn-save:hover {
-      background-color: #28a06a;
-    }
-
-    .alert-success-inline {
-      background: #f0faf5;
-      border: 1px solid #b3e6cc;
-      color: #1a7a4c;
-      border-radius: 10px;
-      padding: 10px 14px;
-      font-size: 13px;
-      margin-bottom: 16px;
-    }
-
-    @media (max-width: 768px) {
-      .settings-layout {
-        grid-template-columns: 1fr;
-      }
-
-      .settings-nav {
-        position: static;
-        display: flex;
-        gap: 4px;
-        padding: 6px;
-      }
-
-      .settings-nav-item {
-        padding: 8px 12px;
-      }
-    }
-  </style>
+  
 </head>
 
 <body>
@@ -327,7 +173,7 @@ function initials(string $name): string
                   <div class="col-sm-6">
                     <label class="form-label small fw-medium">Section</label>
                     <input type="text" name="section" class="form-control" maxlength="40"
-                      value="<?= htmlspecialchars($user['section'] ?? '') ?>" placeholder="e.g. BSIT 2-1"
+                      value="<?= htmlspecialchars($user_section) ?>" placeholder="e.g. BSIT 2-1"
                       style="border-radius:10px;border-color:var(--border-color);" disabled>
                   </div>
                 </div>

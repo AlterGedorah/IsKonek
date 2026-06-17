@@ -24,7 +24,7 @@ $filter_subject_id = isset($_GET['subject']) ? (int)$_GET['subject'] : 0;
 if ($filter_subject_id > 0) {
     $posts_query = $conn->prepare("
         SELECT fp.id, fp.title, fp.views, fp.created_at,
-               u.full_name, u.role,
+               u.first_name, u.role,
                s.code AS subject_code, s.color AS subject_color,
                COUNT(DISTINCT fr.id) AS reply_count
         FROM forum_posts fp
@@ -40,7 +40,7 @@ if ($filter_subject_id > 0) {
     // All posts from enrolled subjects only
     $posts_query = $conn->prepare("
         SELECT fp.id, fp.title, fp.views, fp.created_at,
-               u.full_name, u.role,
+               u.first_name, u.role,
                s.code AS subject_code, s.color AS subject_color,
                COUNT(DISTINCT fr.id) AS reply_count
         FROM forum_posts fp
@@ -413,13 +413,13 @@ function timeAgo(string $datetime): string {
             <a href="forum_post.php?id=<?= $post['id'] ?>" class="thread-row">
               <!-- Left: Avatar + Info -->
               <div class="d-flex align-items-center">
-                <div class="thread-avatar" style="background:<?= avatarColor($post['full_name']) ?>;">
-                  <?= initials($post['full_name']) ?>
+                <div class="thread-avatar" style="background:<?= avatarColor($post['first_name']) ?>;">
+                  <?= initials($post['first_name']) ?>
                 </div>
                 <div class="flex-grow-1 overflow-hidden">
                   <p class="thread-title text-truncate mb-1"><?= htmlspecialchars($post['title']) ?></p>
                   <div class="thread-meta">
-                    <span><?= htmlspecialchars(explode(' ', $post['full_name'])[0]) ?> <?= htmlspecialchars(explode(' ', $post['full_name'])[1][0] ?? '') ?>. &middot; <?= htmlspecialchars($post['role']) ?></span>
+                    <span><?= htmlspecialchars(explode(' ', $post['first_name'])[0]) ?> <?= htmlspecialchars(explode(' ', $post['first_name'])[1][0] ?? '') ?>. &middot; <?= htmlspecialchars($post['role']) ?></span>
                     <?php if ($filter_subject_id === 0): ?>
                       <span class="thread-subject-badge" style="background:<?= htmlspecialchars($post['subject_color']) ?>;"><?= htmlspecialchars($post['subject_code']) ?></span>
                     <?php endif; ?>
