@@ -251,6 +251,74 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const f = document.querySelector('form');
+      const inputs = {
+        fname: f.querySelector('[name="fname"]'),
+        lname: f.querySelector('[name="lname"]'),
+        email: f.querySelector('[name="email"]'),
+        pass: f.querySelector('[name="password"]'),
+        conf: f.querySelector('[name="confirm_password"]'),
+        sid: f.querySelector('[name="student_id"]'),
+        year: f.querySelector('[name="year_level"]'),
+        sec: f.querySelector('[name="section_num"]'),
+        sy: f.querySelector('[name="school_year"]')
+      };
+
+      function check(el, cond, msg) {
+        let err = el.nextElementSibling;
+        if (!err || !err.classList.contains('invalid-feedback')) {
+          err = document.createElement('div');
+          err.className = 'invalid-feedback';
+          el.parentNode.appendChild(err);
+        }
+        if (cond) {
+          el.classList.remove('is-invalid');
+          el.classList.add('is-valid');
+          err.textContent = '';
+        } else {
+          el.classList.remove('is-valid');
+          el.classList.add('is-invalid');
+          err.textContent = msg;
+        }
+      }
+
+      inputs.fname.addEventListener('input', function() { check(this, this.value.trim() !== '', 'Required'); });
+      inputs.lname.addEventListener('input', function() { check(this, this.value.trim() !== '', 'Required'); });
+      inputs.sid.addEventListener('input', function() { check(this, this.value.trim() !== '', 'Required'); });
+
+      inputs.email.addEventListener('input', function() {
+        const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.value.trim());
+        check(this, ok, 'Enter valid email address');
+      });
+
+      inputs.pass.addEventListener('input', function() {
+        check(this, this.value.length >= 8, 'Must be at least 8 characters');
+        if(inputs.conf.value) inputs.conf.dispatchEvent(new Event('input'));
+      });
+
+      inputs.conf.addEventListener('input', function() {
+        check(this, this.value === inputs.pass.value, 'Passwords do not match');
+      });
+
+      inputs.year.addEventListener('input', function() {
+        if(!this.value) { this.classList.remove('is-invalid','is-valid'); return; }
+        const v = parseInt(this.value);
+        check(this, v >= 1 && v <= 6, 'Year must be 1 to 6');
+      });
+
+      inputs.sec.addEventListener('input', function() {
+        if(!this.value) { this.classList.remove('is-invalid','is-valid'); return; }
+        check(this, parseInt(this.value) >= 1, 'Invalid section');
+      });
+
+      inputs.sy.addEventListener('input', function() {
+        if(!this.value) { this.classList.remove('is-invalid','is-valid'); return; }
+        check(this, /^\d{4}-\d{4}$/.test(this.value.trim()), 'Format: YYYY-YYYY');
+      });
+    });
+  </script>
 </body>
 
 </html>

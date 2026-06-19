@@ -64,7 +64,8 @@ $current_page = basename($_SERVER['PHP_SELF']);
                 </a>
             </li>
             <li class="nav-item">
-                <a href="repository.php" class="nav-link sidebar-link <?= $current_page === 'repository.php' ? 'active' : '' ?>">
+                <a href="repository.php"
+                    class="nav-link sidebar-link <?= $current_page === 'repository.php' ? 'active' : '' ?>">
                     <i class="bi bi-folder-fill me-2"></i>
                     File Repository
                 </a>
@@ -74,22 +75,16 @@ $current_page = basename($_SERVER['PHP_SELF']);
         <!-- ADMIN Section -->
         <p class="nav-section-label mt-3">ADMIN</p>
         <ul class="nav flex-column">
+            
+
             <li class="nav-item">
-                <a href="members.php"
-                    class="nav-link sidebar-link <?= $current_page === 'members.php' ? 'active' : '' ?>">
-                    <i class="bi bi-people-fill me-2"></i>
-                    Member Dictionary
+                <a href="manage_subjects.php"
+                    class="nav-link sidebar-link <?= $current_page === 'manage_subjects.php' ? 'active' : '' ?>">
+                    <i class="bi bi-journal-bookmark-fill me-2"></i>
+                    Manage Subjects
                 </a>
             </li>
-            
-                <li class="nav-item">
-                    <a href="manage_subjects.php"
-                        class="nav-link sidebar-link <?= $current_page === 'manage_subjects.php' ? 'active' : '' ?>">
-                        <i class="bi bi-journal-bookmark-fill me-2"></i>
-                        Manage Subjects
-                    </a>
-                </li>
-                <?php if (strtolower($_SESSION['role'] ?? '') === 'admin'): ?>'
+            <?php if (strtolower($_SESSION['role'] ?? '') === 'admin'): ?>
                 <li class="nav-item">
                     <a href="manage_users.php"
                         class="nav-link sidebar-link <?= $current_page === 'manage_users.php' ? 'active' : '' ?>">
@@ -97,15 +92,22 @@ $current_page = basename($_SERVER['PHP_SELF']);
                         Manage Users
                     </a>
                 </li>
+                <li class="nav-item">
+                <a href="members.php"
+                    class="nav-link sidebar-link <?= $current_page === 'members.php' ? 'active' : '' ?>">
+                    <i class="bi bi-people-fill me-2"></i>
+                    Member Dictionary
+                </a>
+            </li>
             <?php endif; ?>
             <?php if (strtolower($_SESSION['role'] ?? '') === 'sup_admin'): ?>
-            <li class="nav-item">
+                <li class="nav-item">
                     <a href="manage_sections.php"
                         class="nav-link sidebar-link <?= $current_page === 'manage_sections.php' ? 'active' : '' ?>">
                         <i class="bi bi-diagram-3-fill me-2"></i>
                         Manage Sections
                     </a>
-            </li>
+                </li>
             <?php endif; ?>
             <li class="nav-item">
                 <a href="settings.php"
@@ -124,7 +126,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
             <div class="avatar-circle d-flex align-items-center justify-content-center overflow-hidden">
                 <?php if (!empty($_SESSION['avatar'])): ?>
                     <img src="<?= htmlspecialchars($_SESSION['avatar']) ?>" alt="Avatar"
-                         style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+                        style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
                 <?php else: ?>
                     <i class="bi bi-person-fill fs-5"></i>
                 <?php endif; ?>
