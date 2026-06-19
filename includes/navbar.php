@@ -74,8 +74,7 @@ function notifIcon(string $type): string
     <div class="d-flex align-items-center gap-3">
         <!-- Notifications -->
         <div class="position-relative" id="notifWrapper">
-            <button class="btn btn-link text-dark p-0" id="notifBtn" data-bs-toggle="dropdown" aria-expanded="false"
-                onclick="markAllRead()">
+            <button class="btn btn-link text-dark p-0" id="notifBtn" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="bi bi-bell fs-5"></i>
                 <?php if ($notif_count > 0): ?>
                     <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
@@ -138,8 +137,13 @@ function notifIcon(string $type): string
         <!-- Account dropdown -->
         <div class="dropdown">
             <button class="btn btn-link p-0 text-dark" data-bs-toggle="dropdown">
-                <div class="avatar-circle-sm d-flex align-items-center justify-content-center">
-                    <i class="bi bi-person-fill"></i>
+                <div class="avatar-circle-sm d-flex align-items-center justify-content-center overflow-hidden">
+                    <?php if (!empty($_SESSION['avatar'])): ?>
+                        <img src="<?= htmlspecialchars($_SESSION['avatar']) ?>" alt="Avatar"
+                            style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+                    <?php else: ?>
+                        <i class="bi bi-person-fill"></i>
+                    <?php endif; ?>
                 </div>
             </button>
             <ul class="dropdown-menu dropdown-menu-end shadow">
@@ -198,104 +202,131 @@ function notifIcon(string $type): string
 </style>
 
 <script>
+    // Mark a single notification as read (called when an item is clicked)
+    function markOneRead(id, el) {
+        fetch('actions/notification_actions.php', {
+            method: 'POST',
+            credentials: 'same-origin',
+            body: new URLSearchParams({ action: 'mark_read', notif_id: id }),
+            keepalive: true
+        }).catch(() => {});
+        if (el) {
+            el.classList.remove('notif-unread');
+            const dot = el.querySelector('span[style*="border-radius:50%"]');
+            if (dot) dot.remove();
+            // Decrement badge live
+            const badge = document.getElementById('notifBadge');
+            const current = parseInt(badge.textContent || '0', 10) || 0;
+            const next = Math.max(0, current - 1);
+            if (next > 0) {
+                badge.textContent = next;
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+    }
+
+    // Mark all read (called only from the explicit button, not the bell)
     function markAllRead() {
         fetch('actions/notification_actions.php', {
             method: 'POST',
+            credentials: 'same-origin',
             body: new URLSearchParams({ action: 'mark_all_read' })
-        }).then(() => {
+        }).then(r => r.json()).then(data => {
+            if (!data.success) return;
             document.getElementById('notifBadge').style.display = 'none';
             document.querySelectorAll('.notif-unread').forEach(el => {
                 el.classList.remove('notif-unread');
                 const dot = el.querySelector('span[style*="border-radius:50%"]');
                 if (dot) dot.remove();
             });
-        });
+        }).catch(err => console.error('markAllRead failed:', err));
     }
 
+    // Bind click → mark-read for every existing notification link
     document.querySelectorAll('a[data-id]').forEach(link => {
         link.addEventListener('click', function () {
             const id = this.dataset.id;
-            if (id) {
-                this.classList.remove('bg-light', 'notif-unread');
-                const dot = this.querySelector('span[style*="border-radius:50%"]');
-                if (dot) dot.remove();
-                fetch('actions/notification_actions.php', {
-                    method: 'POST',
-                    body: new URLSearchParams({ action: 'mark_read', notif_id: id }),
-                    keepalive: true
-                });
-            }
+            if (id) markOneRead(id, this);
         });
     });
 
     // ── Live notification polling ─────────────────────────────
-    let lastNotifId = <?php echo !empty($notifications) ? (int)$notifications[0]['id'] : 0; ?>;
+    let lastNotifId = <?php echo !empty($notifications) ? (int) $notifications[0]['id'] : 0; ?>;
 
     function escHtml(s) {
-        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                         .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function prependNotification(n) {
+        if (document.querySelector(`a[data-id="${n.id}"]`)) return; // dedupe
+
+        const dropdownList = document.querySelector('#notifWrapper .dropdown-menu');
+        if (!dropdownList) return;
+
+        // Remove empty state if present
+        const emptyDiv = dropdownList.querySelector('.bi-bell-slash')?.closest('li');
+        if (emptyDiv) emptyDiv.remove();
+
+        const header = dropdownList.querySelector('li:first-child');
+        if (!header) return;
+
+        const li = document.createElement('li');
+        li.innerHTML = `
+            <a class="dropdown-item px-4 py-3 d-flex align-items-start gap-3 notif-item notif-unread"
+               href="${escHtml(n.link)}" data-id="${n.id}"
+               style="border-bottom:1px solid var(--border-color);white-space:normal;">
+                <i class="bi ${escHtml(n.icon)} mt-1 flex-shrink-0" style="font-size:15px;"></i>
+                <div style="flex:1;min-width:0;">
+                    <p class="mb-0" style="font-size:13px;color:var(--text-primary);line-height:1.4;">${escHtml(n.message)}</p>
+                    <p class="mb-0 mt-1" style="font-size:11px;color:var(--text-muted);">${escHtml(n.time_ago)}</p>
+                </div>
+                <span class="flex-shrink-0 mt-1" style="width:8px;height:8px;border-radius:50%;background:var(--accent-green);display:inline-block;"></span>
+            </a>`;
+
+        li.querySelector('a').addEventListener('click', function () {
+            markOneRead(n.id, this);
+        });
+
+        header.after(li);
+
+        if (n.id > lastNotifId) lastNotifId = n.id;
+    }
+
+    function updateBadge(count) {
+        const badge = document.getElementById('notifBadge');
+        if (!badge) return;
+        if (count > 0) {
+            badge.textContent = count;
+            badge.style.display = '';
+        } else {
+            badge.style.display = 'none';
+        }
     }
 
     function pollNotifications() {
-        fetch('actions/notif_poll.php?after_id=' + lastNotifId)
-            .then(r => r.json())
-            .then(data => {
-                if (!data.success) return;
+        fetch('actions/notif_poll.php?after_id=' + lastNotifId, {
+            credentials: 'same-origin',
+            cache: 'no-store'
+        })
+        .then(r => {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+        })
+        .then(data => {
+            if (!data || !data.success) return;
 
-                // Update badge count
-                const badge = document.getElementById('notifBadge');
-                if (data.unread_count > 0) {
-                    badge.textContent = data.unread_count;
-                    badge.style.display = '';
-                } else {
-                    badge.style.display = 'none';
-                }
+            updateBadge(data.unread_count || 0);
 
-                // Prepend new notifications to dropdown
-                if (data.notifications.length > 0) {
-                    const dropdownList = document.querySelector('#notifWrapper .dropdown-menu');
-                    const header = dropdownList.querySelector('li:first-child');
-                    const viewAllBtn = dropdownList.querySelector('li:last-child');
-
-                    // Remove empty state if present
-                    const emptyDiv = dropdownList.querySelector('.bi-bell-slash')?.closest('li');
-                    if (emptyDiv) emptyDiv.remove();
-
-                    data.notifications.forEach(n => {
-                        if (document.querySelector(`a[data-id="${n.id}"]`)) return; // already exists
-
-                        const li = document.createElement('li');
-                        li.innerHTML = `
-                            <a class="dropdown-item px-4 py-3 d-flex align-items-start gap-3 notif-item notif-unread"
-                               href="${escHtml(n.link)}" data-id="${n.id}"
-                               style="border-bottom:1px solid var(--border-color);white-space:normal;">
-                                <i class="bi ${escHtml(n.icon)} mt-1 flex-shrink-0" style="font-size:15px;"></i>
-                                <div style="flex:1;min-width:0;">
-                                    <p class="mb-0" style="font-size:13px;color:var(--text-primary);line-height:1.4;">${escHtml(n.message)}</p>
-                                    <p class="mb-0 mt-1" style="font-size:11px;color:var(--text-muted);">${escHtml(n.time_ago)}</p>
-                                </div>
-                                <span class="flex-shrink-0 mt-1" style="width:8px;height:8px;border-radius:50%;background:var(--accent-green);display:inline-block;"></span>
-                            </a>`;
-
-                        // Attach mark-read on click
-                        li.querySelector('a').addEventListener('click', function () {
-                            this.classList.remove('notif-unread');
-                            const dot = this.querySelector('span[style*="border-radius:50%"]');
-                            if (dot) dot.remove();
-                            fetch('actions/notification_actions.php', {
-                                method: 'POST',
-                                body: new URLSearchParams({ action: 'mark_read', notif_id: n.id }),
-                                keepalive: true
-                            });
-                        });
-
-                        // Insert after header, before everything else
-                        header.after(li);
-                        if (n.id > lastNotifId) lastNotifId = n.id;
-                    });
-                }
-            })
-            .catch(() => {});
+            if (Array.isArray(data.notifications) && data.notifications.length > 0) {
+                data.notifications.forEach(prependNotification);
+            }
+        })
+        .catch(err => console.error('Notification poll failed:', err));
     }
 
+    // Initial poll + every 5s
+    pollNotifications();
     setInterval(pollNotifications, 5000);
 </script>

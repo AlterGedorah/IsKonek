@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $error = 'Please fill in all fields.';
   } else {
     $stmt = $conn->prepare("
-        SELECT u.id, u.first_name, u.mid_name, u.last_name, u.email, u.password, u.role, u.section_id,
+        SELECT u.id, u.first_name, u.mid_name, u.last_name, u.email, u.password, u.role, u.section_id, u.avatar,
                s.program, s.year, s.section
         FROM users u
         LEFT JOIN sections s ON u.section_id = s.id
@@ -42,6 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['program'] = $user['program'];
         $_SESSION['year'] = $user['year'];
         $_SESSION['section_num'] = $user['section'];
+        $_SESSION['avatar'] = $user['avatar'];
 
         $prog = $user['program'] ?? '';
 
