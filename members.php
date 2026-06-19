@@ -136,7 +136,7 @@ function initials(string $name): string
           </div>
           <div class="d-flex gap-2 align-items-center flex-wrap">
             <input type="text" id="memberSearch" class="search-bar" placeholder="Search members…">
-            <?php if ($is_admin): ?>
+            <?php if ($is_admin === 'sup_admin'): ?>
               <button class="btn-add-member" onclick="openAddMemberModal()">
                 <i class="bi bi-person-plus-fill"></i> Add Member
               </button>

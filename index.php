@@ -16,11 +16,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if (empty($email) || empty($password)) {
     $error = 'Please fill in all fields.';
   } else {
-    $stmt = $conn->prepare("SELECT id, first_name, mid_name, last_name, email, password, role, section_id FROM users WHERE email = ?");
-    $stmt->bind_param("s", $email);
-    $stmt->execute();
-    $result = $stmt->get_result();
-
     $stmt = $conn->prepare("
         SELECT u.id, u.first_name, u.mid_name, u.last_name, u.email, u.password, u.role, u.section_id,
                s.program, s.year, s.section
@@ -47,8 +42,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['program'] = $user['program'];
         $_SESSION['year'] = $user['year'];
         $_SESSION['section_num'] = $user['section'];
-
-        $prog = $user['program'] ?? '';
 
         $prog = $user['program'] ?? '';
 
@@ -163,15 +156,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    document.getElementById('togglePassword').addEventListener('click', function () {
-      const inp = document.getElementById('passwordInput');
-      const icon = document.getElementById('eyeIcon');
-      if (inp.type === 'password') {
-        inp.type = 'text';
-        icon.className = 'bi bi-eye-slash';
-      } else {
-        inp.type = 'password';
-        icon.className = 'bi bi-eye';
+    document.addEventListener('DOMContentLoaded', function () {
+      /* Toggle Password Visibility */
+      const toggleBtn = document.getElementById('togglePassword');
+      if (toggleBtn) {
+        toggleBtn.addEventListener('click', function () {
+          const inp = document.getElementById('passwordInput');
+          const icon = document.getElementById('eyeIcon');
+          if (inp.type === 'password') {
+            inp.type = 'text';
+            icon.className = 'bi bi-eye-slash';
+          } else {
+            inp.type = 'password';
+            icon.className = 'bi bi-eye';
+          }
+        });
+      }
+
+      /* Real-time Validation */
+      const emailInput = document.querySelector('input[name="email"]');
+      const passInput = document.getElementById('passwordInput');
+
+      function validateField(input, condition, errorMsg) {
+        let feedback = input.closest('.input-group') 
+          ? input.closest('.input-group').nextElementSibling 
+          : input.nextElementSibling;
+
+        if (!feedback || !feedback.classList.contains('invalid-feedback')) {
+          feedback = document.createElement('div');
+          feedback.className = 'invalid-feedback';
+          if (input.closest('.input-group')) {
+            input.closest('.input-group').parentNode.appendChild(feedback);
+          } else {
+            input.parentNode.appendChild(feedback);
+          }
+        }
+
+        if (condition) {
+          input.classList.remove('is-invalid');
+          input.classList.add('is-valid');
+          feedback.textContent = '';
+        } else {
+          input.classList.remove('is-valid');
+          input.classList.add('is-invalid');
+          feedback.textContent = errorMsg;
+        }
+      }
+
+      if (emailInput) {
+        emailInput.addEventListener('input', function () {
+          const val = this.value.trim();
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          validateField(this, emailRegex.test(val), 'Enter valid email address');
+        });
+      }
+
+      if (passInput) {
+        passInput.addEventListener('input', function () {
+          const val = this.value;
+          validateField(this, val.length >= 1, 'Password cannot be empty');
+        });
       }
     });
   </script>
