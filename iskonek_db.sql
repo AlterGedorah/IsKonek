@@ -70,9 +70,13 @@ CREATE TABLE `events` (
   `description` text DEFAULT NULL,
   `event_date` date NOT NULL,
   `event_time` time DEFAULT NULL,
+  `category` enum('event','deadline','exam','activity','holiday') NOT NULL DEFAULT 'event',
   `created_by` int(11) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Migration: run this if the events table already exists in your DB
+-- ALTER TABLE `events` ADD COLUMN `category` enum('event','deadline','exam','activity','holiday') NOT NULL DEFAULT 'event' AFTER `event_time`;
 
 --
 -- Dumping data for table `events`
