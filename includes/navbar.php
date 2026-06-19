@@ -49,15 +49,7 @@ function notifIcon(string $type): string
         return 'bi-calendar-event-fill text-primary';
     return 'bi-bell-fill';
 }
-// Insert notif for all enrolled students
-$notif = $conn->prepare("
-    INSERT INTO notifications (user_id, type, reference_id, message) 
-    SELECT user_id, 'announcement', ?, ? 
-    FROM enrollments 
-    WHERE subject_id = ?
-");
-$notif->bind_param("isi", $new_announcement_id, $announcement_title, $subject_id);
-$notif->execute();
+
 ?>
 <nav class="top-navbar d-flex align-items-center justify-content-between px-4">
     <button class="btn btn-link d-lg-none p-0 me-3 text-dark" id="sidebarToggle">

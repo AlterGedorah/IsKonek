@@ -167,7 +167,7 @@ function initials(string $name): string
                   <div class="col-sm-6">
                     <label class="form-label small fw-medium">Year</label>
                     <input type="text" name="year" class="form-control" maxlength="40"
-                      value="<?= htmlspecialchars($user['year'] ?? '') ?>" placeholder="1"
+                      value="<?= htmlspecialchars($_SESSION['year'] ?? '') ?>" placeholder="1"
                       style="border-radius:10px;border-color:var(--border-color);" disabled>
                   </div>
                   <div class="col-sm-6">

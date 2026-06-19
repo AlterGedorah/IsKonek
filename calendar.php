@@ -219,7 +219,7 @@ $cat_config = [
         <!-- Page header -->
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
           <div>
-            <h2 class="hero-greeting mb-1">Calendar 📅</h2>
+            <h2 class="hero-greeting mb-1">Calendar</h2>
             <p class="hero-sub text-muted mb-0">Get updated on future events!</p>
           </div>
           <button class="btn-add-deadline d-flex align-items-center gap-2"

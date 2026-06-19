@@ -62,7 +62,8 @@ function initials(string $name): string {
 }
 
 function timeAgo(string $datetime): string {
-    $diff = time() - strtotime($datetime);
+    // max(0, ...) stop negative numbers
+    $diff = max(0, time() - strtotime($datetime)); 
     if ($diff < 60)     return 'just now';
     if ($diff < 3600)   return floor($diff / 60) . 'm ago';
     if ($diff < 86400)  return floor($diff / 3600) . 'h ago';
