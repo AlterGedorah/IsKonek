@@ -38,6 +38,8 @@ function notifLink(string $type, int $ref_id): string
         return 'announcements.php';
     if ($type === 'event')
         return 'calendar.php';
+    if ($type === 'forum_reply')
+        return 'forum_post.php?id=' . $ref_id;
     return '#';
 }
 
@@ -47,6 +49,8 @@ function notifIcon(string $type): string
         return 'bi-megaphone-fill text-success';
     if ($type === 'event')
         return 'bi-calendar-event-fill text-primary';
+    if ($type === 'forum_reply')
+        return 'bi-chat-fill text-warning';
     return 'bi-bell-fill';
 }
 
@@ -195,7 +199,7 @@ function notifIcon(string $type): string
 
 <script>
     function markAllRead() {
-        fetch('/actions/notification_actions.php', {
+        fetch('actions/notification_actions.php', {
             method: 'POST',
             body: new URLSearchParams({ action: 'mark_all_read' })
         }).then(() => {
@@ -207,16 +211,14 @@ function notifIcon(string $type): string
             });
         });
     }
+
     document.querySelectorAll('a[data-id]').forEach(link => {
         link.addEventListener('click', function () {
             const id = this.dataset.id;
             if (id) {
-                // 1. Kill UI instantly
                 this.classList.remove('bg-light', 'notif-unread');
                 const dot = this.querySelector('span[style*="border-radius:50%"]');
                 if (dot) dot.remove();
-
-                // 2. Update DB
                 fetch('actions/notification_actions.php', {
                     method: 'POST',
                     body: new URLSearchParams({ action: 'mark_read', notif_id: id }),
@@ -225,4 +227,75 @@ function notifIcon(string $type): string
             }
         });
     });
+
+    // ── Live notification polling ─────────────────────────────
+    let lastNotifId = <?php echo !empty($notifications) ? (int)$notifications[0]['id'] : 0; ?>;
+
+    function escHtml(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function pollNotifications() {
+        fetch('actions/notif_poll.php?after_id=' + lastNotifId)
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) return;
+
+                // Update badge count
+                const badge = document.getElementById('notifBadge');
+                if (data.unread_count > 0) {
+                    badge.textContent = data.unread_count;
+                    badge.style.display = '';
+                } else {
+                    badge.style.display = 'none';
+                }
+
+                // Prepend new notifications to dropdown
+                if (data.notifications.length > 0) {
+                    const dropdownList = document.querySelector('#notifWrapper .dropdown-menu');
+                    const header = dropdownList.querySelector('li:first-child');
+                    const viewAllBtn = dropdownList.querySelector('li:last-child');
+
+                    // Remove empty state if present
+                    const emptyDiv = dropdownList.querySelector('.bi-bell-slash')?.closest('li');
+                    if (emptyDiv) emptyDiv.remove();
+
+                    data.notifications.forEach(n => {
+                        if (document.querySelector(`a[data-id="${n.id}"]`)) return; // already exists
+
+                        const li = document.createElement('li');
+                        li.innerHTML = `
+                            <a class="dropdown-item px-4 py-3 d-flex align-items-start gap-3 notif-item notif-unread"
+                               href="${escHtml(n.link)}" data-id="${n.id}"
+                               style="border-bottom:1px solid var(--border-color);white-space:normal;">
+                                <i class="bi ${escHtml(n.icon)} mt-1 flex-shrink-0" style="font-size:15px;"></i>
+                                <div style="flex:1;min-width:0;">
+                                    <p class="mb-0" style="font-size:13px;color:var(--text-primary);line-height:1.4;">${escHtml(n.message)}</p>
+                                    <p class="mb-0 mt-1" style="font-size:11px;color:var(--text-muted);">${escHtml(n.time_ago)}</p>
+                                </div>
+                                <span class="flex-shrink-0 mt-1" style="width:8px;height:8px;border-radius:50%;background:var(--accent-green);display:inline-block;"></span>
+                            </a>`;
+
+                        // Attach mark-read on click
+                        li.querySelector('a').addEventListener('click', function () {
+                            this.classList.remove('notif-unread');
+                            const dot = this.querySelector('span[style*="border-radius:50%"]');
+                            if (dot) dot.remove();
+                            fetch('actions/notification_actions.php', {
+                                method: 'POST',
+                                body: new URLSearchParams({ action: 'mark_read', notif_id: n.id }),
+                                keepalive: true
+                            });
+                        });
+
+                        // Insert after header, before everything else
+                        header.after(li);
+                        if (n.id > lastNotifId) lastNotifId = n.id;
+                    });
+                }
+            })
+            .catch(() => {});
+    }
+
+    setInterval(pollNotifications, 5000);
 </script>

@@ -309,8 +309,11 @@ function timeAgo(string $datetime): string {
           <?php endif; ?>
 
           <div class="post-stats">
-            <span><i class="bi bi-chat me-1"></i><?= count($replies) ?> <?= count($replies) === 1 ? 'reply' : 'replies' ?></span>
+            <span><i class="bi bi-chat me-1"></i><span id="replyCount"><?= count($replies) ?></span> <?= count($replies) === 1 ? 'reply' : 'replies' ?></span>
             <span><i class="bi bi-eye me-1"></i><?= (int)$post['views'] ?> views</span>
+            <button id="followBtn" class="ms-auto btn btn-sm" style="border-radius:10px;font-size:12px;font-weight:500;padding:5px 14px;border:1px solid var(--border-color);background:white;color:var(--text-secondary);">
+              <i class="bi bi-bell me-1" id="followIcon"></i><span id="followLabel">Follow Thread</span>
+            </button>
           </div>
         </div>
 
@@ -369,13 +372,53 @@ document.addEventListener('DOMContentLoaded', function () {
   if (toggleBtn) toggleBtn.addEventListener('click', () => { sidebar.classList.toggle('show'); overlay?.classList.toggle('show'); });
   if (overlay)   overlay.addEventListener('click', () => { sidebar.classList.remove('show'); overlay.classList.remove('show'); });
 
-  const POST_ID = <?= $post_id ?>;
+  const POST_ID      = <?= $post_id ?>;
+  const CURRENT_USER = <?= $user_id ?>;
 
-  // Submit reply
+  // ── Track last reply id for polling ─────────────────────────
+  let lastReplyId = 0;
+  document.querySelectorAll('.reply-card[id^="reply-"]').forEach(el => {
+    const id = parseInt(el.id.replace('reply-', ''));
+    if (id > lastReplyId) lastReplyId = id;
+  });
+
+  // ── Live polling (every 4 seconds) ──────────────────────────
+  function pollReplies() {
+    fetch(`actions/forum_poll.php?post_id=${POST_ID}&after_id=${lastReplyId}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.success && data.replies.length > 0) {
+          data.replies.forEach(reply => {
+            if (!document.getElementById('reply-' + reply.id)) {
+              appendReply(reply);
+              if (reply.id > lastReplyId) lastReplyId = reply.id;
+            }
+          });
+          updateReplyCount();
+        }
+      })
+      .catch(() => {});
+  }
+
+  setInterval(pollReplies, 4000);
+
+  // ── Reply count updater ──────────────────────────────────────
+  function updateReplyCount() {
+    const count = document.querySelectorAll('.reply-card').length;
+    const span = document.getElementById('replyCount');
+    if (span) span.textContent = count;
+    const header = document.querySelector('.replies-header');
+    if (header) {
+      header.textContent = count + (count === 1 ? ' Reply' : ' Replies');
+    }
+  }
+
+  // ── Submit reply ─────────────────────────────────────────────
   document.getElementById('submitReply').addEventListener('click', function () {
     const body = document.getElementById('replyBody').value.trim();
     if (!body) return;
 
+    this.disabled = true;
     const fd = new FormData();
     fd.append('action', 'create_reply');
     fd.append('post_id', POST_ID);
@@ -386,16 +429,24 @@ document.addEventListener('DOMContentLoaded', function () {
       .then(data => {
         if (data.success) {
           document.getElementById('replyBody').value = '';
-          appendReply(data.reply);
+          const reply = data.reply;
+          reply.is_mine = true;
+          reply.time_ago = 'just now';
+          if (!document.getElementById('reply-' + reply.id)) {
+            appendReply(reply);
+            if (reply.id > lastReplyId) lastReplyId = reply.id;
+          }
+          updateReplyCount();
         } else {
           const err = document.getElementById('replyError');
           err.textContent = data.message || 'Failed to post reply.';
           err.style.display = 'block';
         }
-      });
+      })
+      .finally(() => { this.disabled = false; });
   });
 
-  // Append reply to DOM
+  // ── Append reply to DOM ──────────────────────────────────────
   function appendReply(reply) {
     const container = document.getElementById('repliesContainer');
     const div = document.createElement('div');
@@ -403,22 +454,29 @@ document.addEventListener('DOMContentLoaded', function () {
     div.id = 'reply-' + reply.id;
     div.innerHTML = `
       <div class="d-flex align-items-center gap-2">
-        <div class="reply-avatar" style="background:${reply.avatar_color};">${reply.initials}</div>
+        <div class="reply-avatar" style="background:${reply.avatar_color};">${escHtml(reply.initials)}</div>
         <div class="flex-grow-1">
           <p class="mb-0 fw-medium" style="font-size:13px;">${escHtml(reply.full_name)}</p>
-          <p class="mb-0 text-muted" style="font-size:11px;">${escHtml(reply.role)} · just now</p>
+          <p class="mb-0 text-muted" style="font-size:11px;">${escHtml(reply.role)} · ${escHtml(reply.time_ago)}</p>
         </div>
-        <button class="reply-delete delete-reply-btn" data-id="${reply.id}">
-          <i class="bi bi-trash"></i>
-        </button>
+        ${reply.is_mine ? `<button class="reply-delete delete-reply-btn" data-id="${reply.id}"><i class="bi bi-trash"></i></button>` : ''}
       </div>
       <div class="reply-body">${escHtml(reply.body)}</div>`;
     container.appendChild(div);
-    div.querySelector('.delete-reply-btn').addEventListener('click', deleteReplyHandler);
+
+    // Show replies header if first
+    if (!document.querySelector('.replies-header')) {
+      const h = document.createElement('p');
+      h.className = 'replies-header';
+      h.textContent = '1 Reply';
+      container.before(h);
+    }
+
+    div.querySelector('.delete-reply-btn')?.addEventListener('click', deleteReplyHandler);
     div.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
-  // Delete reply
+  // ── Delete reply ─────────────────────────────────────────────
   function deleteReplyHandler() {
     const id = this.dataset.id;
     if (!confirm('Delete this reply?')) return;
@@ -428,7 +486,10 @@ document.addEventListener('DOMContentLoaded', function () {
     fetch('actions/forum_actions.php', { method: 'POST', body: fd })
       .then(r => r.json())
       .then(data => {
-        if (data.success) document.getElementById('reply-' + id)?.remove();
+        if (data.success) {
+          document.getElementById('reply-' + id)?.remove();
+          updateReplyCount();
+        }
       });
   }
 
@@ -436,7 +497,7 @@ document.addEventListener('DOMContentLoaded', function () {
     btn.addEventListener('click', deleteReplyHandler);
   });
 
-  // Delete post
+  // ── Delete post ───────────────────────────────────────────────
   const deletePostBtn = document.getElementById('deletePostBtn');
   if (deletePostBtn) {
     deletePostBtn.addEventListener('click', function () {
@@ -446,12 +507,51 @@ document.addEventListener('DOMContentLoaded', function () {
       fd.append('post_id', POST_ID);
       fetch('actions/forum_actions.php', { method: 'POST', body: fd })
         .then(r => r.json())
-        .then(data => {
-          if (data.success) window.location.href = 'forums.php';
-        });
+        .then(data => { if (data.success) window.location.href = 'forums.php'; });
     });
   }
 
+  // ── Follow Thread ─────────────────────────────────────────────
+  const followBtn   = document.getElementById('followBtn');
+  const followIcon  = document.getElementById('followIcon');
+  const followLabel = document.getElementById('followLabel');
+
+  function setFollowUI(following) {
+    if (following) {
+      followBtn.style.background  = 'var(--accent-green)';
+      followBtn.style.color       = 'white';
+      followBtn.style.borderColor = 'var(--accent-green)';
+      followIcon.className        = 'bi bi-bell-fill me-1';
+      followLabel.textContent     = 'Following';
+    } else {
+      followBtn.style.background  = 'white';
+      followBtn.style.color       = 'var(--text-secondary)';
+      followBtn.style.borderColor = 'var(--border-color)';
+      followIcon.className        = 'bi bi-bell me-1';
+      followLabel.textContent     = 'Follow Thread';
+    }
+  }
+
+  // Load initial follow state
+  (function () {
+    const fd = new FormData();
+    fd.append('action', 'check_follow');
+    fd.append('post_id', POST_ID);
+    fetch('actions/forum_actions.php', { method: 'POST', body: fd })
+      .then(r => r.json())
+      .then(data => { if (data.success) setFollowUI(data.following); });
+  })();
+
+  followBtn.addEventListener('click', function () {
+    const fd = new FormData();
+    fd.append('action', 'follow_thread');
+    fd.append('post_id', POST_ID);
+    fetch('actions/forum_actions.php', { method: 'POST', body: fd })
+      .then(r => r.json())
+      .then(data => { if (data.success) setFollowUI(data.following); });
+  });
+
+  // ── Utility ───────────────────────────────────────────────────
   function escHtml(str) {
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
