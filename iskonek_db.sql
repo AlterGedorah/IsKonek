@@ -156,6 +156,8 @@ CREATE TABLE `kanban_tasks` (
 
 --
 -- Table structure for table `managers`
+-- One row per section (UNIQUE on section_id) so each section has at most one manager.
+-- The managers.user_id is kept in sync with sections.manager_id.
 --
 
 CREATE TABLE `managers` (
@@ -164,6 +166,9 @@ CREATE TABLE `managers` (
   `user_id` int(11) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Migration: ensure the unique key exists on legacy databases
+-- ALTER TABLE `managers` ADD UNIQUE KEY `uniq_section` (`section_id`);
 
 -- --------------------------------------------------------
 
@@ -592,3 +597,17 @@ COMMIT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+
+ALTER TABLE `notifications` MODIFY COLUMN `type` ENUM('announcement','event','forum_reply') NOT NULL;
+
+CREATE TABLE IF NOT EXISTS `forum_followers` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `post_id` int(11) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_follow` (`user_id`,`post_id`),
+  KEY `post_id` (`post_id`),
+  CONSTRAINT `forum_followers_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `forum_followers_ibfk_2` FOREIGN KEY (`post_id`) REFERENCES `forum_posts` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;

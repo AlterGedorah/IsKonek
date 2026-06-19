@@ -101,6 +101,38 @@ if ($action === 'create_reply') {
     $full_name = $_SESSION['full_name'] ?? 'Student';
     $role      = $_SESSION['role']      ?? 'Student';
 
+    // Get post title for notification message
+    $post_info = $conn->prepare("SELECT title, user_id FROM forum_posts WHERE id = ?");
+    $post_info->bind_param("i", $post_id);
+    $post_info->execute();
+    $post_row = $post_info->get_result()->fetch_assoc();
+
+    if ($post_row) {
+        $post_title = $post_row['title'];
+        $post_author_id = (int)$post_row['user_id'];
+        $short_title = mb_strlen($post_title) > 60 ? mb_substr($post_title, 0, 57) . '...' : $post_title;
+        $notif_msg = htmlspecialchars($full_name) . ' replied to: "' . $short_title . '"';
+
+        // Notify all followers (excluding the replier)
+        $followers = $conn->prepare("SELECT user_id FROM forum_followers WHERE post_id = ? AND user_id != ?");
+        $followers->bind_param("ii", $post_id, $user_id);
+        $followers->execute();
+        $follower_rows = $followers->get_result()->fetch_all(MYSQLI_ASSOC);
+
+        // Also notify post author if not already a follower and not the replier
+        $notified_users = array_column($follower_rows, 'user_id');
+        if ($post_author_id !== $user_id && !in_array($post_author_id, $notified_users)) {
+            $follower_rows[] = ['user_id' => $post_author_id];
+        }
+
+        $notif_stmt = $conn->prepare("INSERT INTO notifications (user_id, type, reference_id, message) VALUES (?, 'forum_reply', ?, ?)");
+        foreach ($follower_rows as $f) {
+            $fuid = (int)$f['user_id'];
+            $notif_stmt->bind_param("iis", $fuid, $post_id, $notif_msg);
+            $notif_stmt->execute();
+        }
+    }
+
     json_success([
         'reply' => [
             'id'           => $reply_id,
@@ -124,6 +156,41 @@ if ($action === 'delete_reply') {
         json_error('Could not delete reply.');
     }
     json_success();
+}
+
+// ── Follow / Unfollow Thread ─────────────────────────────────
+if ($action === 'follow_thread') {
+    $post_id = (int)($_POST['post_id'] ?? 0);
+    if (!$post_id) json_error('Invalid post.');
+
+    // Check if already following
+    $check = $conn->prepare("SELECT id FROM forum_followers WHERE user_id = ? AND post_id = ?");
+    $check->bind_param("ii", $user_id, $post_id);
+    $check->execute();
+    if ($check->get_result()->num_rows > 0) {
+        // Unfollow
+        $del = $conn->prepare("DELETE FROM forum_followers WHERE user_id = ? AND post_id = ?");
+        $del->bind_param("ii", $user_id, $post_id);
+        $del->execute();
+        json_success(['following' => false]);
+    } else {
+        // Follow
+        $ins = $conn->prepare("INSERT INTO forum_followers (user_id, post_id) VALUES (?,?)");
+        $ins->bind_param("ii", $user_id, $post_id);
+        $ins->execute();
+        json_success(['following' => true]);
+    }
+}
+
+// ── Check Follow Status ──────────────────────────────────────
+if ($action === 'check_follow') {
+    $post_id = (int)($_POST['post_id'] ?? 0);
+    if (!$post_id) json_error('Invalid post.');
+    $check = $conn->prepare("SELECT id FROM forum_followers WHERE user_id = ? AND post_id = ?");
+    $check->bind_param("ii", $user_id, $post_id);
+    $check->execute();
+    $following = $check->get_result()->num_rows > 0;
+    json_success(['following' => $following]);
 }
 
 json_error('Unknown action.');

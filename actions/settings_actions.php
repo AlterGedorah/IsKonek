@@ -7,9 +7,23 @@ $user_id = $_SESSION['user_id'];
 $action  = $_POST['action'] ?? '';
 
 if ($action === 'update_profile') {
-    $section     = trim($_POST['section']     ?? '');
-    $avatar_data = $_POST['avatar_data']      ?? '';
+    $section_name = trim($_POST['section'] ?? '');
+    $avatar_data  = $_POST['avatar_data']  ?? '';
 
+    // 1. Look up the section_id from the sections table
+    $section_id = null;
+    if (!empty($section_name)) {
+        $sec_stmt = $conn->prepare("SELECT id FROM sections WHERE name = ? LIMIT 1");
+        $sec_stmt->bind_param("s", $section_name);
+        $sec_stmt->execute();
+        $sec_res = $sec_stmt->get_result()->fetch_assoc();
+        if ($sec_res) {
+            $section_id = $sec_res['id'];
+        }
+        $sec_stmt->close();
+    }
+
+    // 2. Handle avatar upload
     $avatar_path = null;
     if (!empty($avatar_data) && strpos($avatar_data, 'data:image') === 0) {
         $upload_dir = '../assets/avatars/';
@@ -20,16 +34,22 @@ if ($action === 'update_profile') {
         $avatar_path = 'assets/avatars/' . $filename;
     }
 
+    // 3. Update the users table using section_id instead of section
     if ($avatar_path) {
-        $stmt = $conn->prepare("UPDATE users SET section=?, avatar=? WHERE id=?");
-        $stmt->bind_param("ssi", $section, $avatar_path, $user_id);
+        // "isi" = integer (section_id), string (avatar_path), integer (user_id)
+        $stmt = $conn->prepare("UPDATE users SET section_id=?, avatar=? WHERE id=?");
+        $stmt->bind_param("isi", $section_id, $avatar_path, $user_id);
     } else {
-        $stmt = $conn->prepare("UPDATE users SET section=? WHERE id=?");
-        $stmt->bind_param("si", $section, $user_id);
+        // "ii" = integer (section_id), integer (user_id)
+        $stmt = $conn->prepare("UPDATE users SET section_id=? WHERE id=?");
+        $stmt->bind_param("ii", $section_id, $user_id);
     }
 
     if ($stmt->execute()) {
-        $_SESSION['section'] = $section;
+        $_SESSION['section'] = $section_name; // Keep session updated for the UI
+        if ($avatar_path) {
+            $_SESSION['avatar'] = $avatar_path; // Refresh avatar in session so sidebar/navbar reflect it
+        }
         header('Location: ../settings.php?success=profile&tab=profile');
     } else {
         header('Location: ../settings.php?error=profile&tab=profile');
