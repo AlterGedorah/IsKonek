@@ -50,6 +50,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   if (empty($first_name) || empty($last_name) || empty($email) || empty($student_id) || empty($password)) {
     $error = 'Please fill in all required fields.';
+  } elseif (preg_match('/[0-9]/', $first_name) || preg_match('/[0-9]/', $last_name) || (!empty($mid_name) && preg_match('/[0-9]/', $mid_name))) {
+    $error = 'Names cannot contain numbers.';
   } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
     $error = 'Please enter a valid email address.';
   } elseif (strlen($password) < 8) {
@@ -160,7 +162,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="alert-error mb-3"><i class="bi bi-exclamation-circle me-1"></i><?= htmlspecialchars($error) ?></div>
       <?php endif; ?>
 
-      <form method="POST" action="">
+      <form method="POST" action="" id="registerForm">
         <div class="row g-4 mb-3">
 
           <div class="col-md-6 d-flex flex-column gap-3">
@@ -192,6 +194,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               <div class="col-6">
                 <label class="form-label small fw-medium">Password <span class="text-danger">*</span></label>
                 <input type="password" name="password" class="form-control" placeholder="Min 8 characters" required>
+                <div id="passStrength" class="small mt-1" style="display:none; font-size:11px;"></div>
               </div>
               <div class="col-6">
                 <label class="form-label small fw-medium">Confirm Password <span class="text-danger">*</span></label>
@@ -253,9 +256,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', function () {
-      const f = document.querySelector('form');
+      const f = document.getElementById('registerForm');
       const inputs = {
         fname: f.querySelector('[name="fname"]'),
+        mname: f.querySelector('[name="mname"]'),
         lname: f.querySelector('[name="lname"]'),
         email: f.querySelector('[name="email"]'),
         pass: f.querySelector('[name="password"]'),
@@ -266,12 +270,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         sy: f.querySelector('[name="school_year"]')
       };
 
+      const passStrength = document.getElementById('passStrength');
+      const noNumbersRegex = /^[^0-9]+$/;
+
       function check(el, cond, msg) {
         let err = el.nextElementSibling;
         if (!err || !err.classList.contains('invalid-feedback')) {
           err = document.createElement('div');
           err.className = 'invalid-feedback';
-          el.parentNode.appendChild(err);
+          el.parentNode.insertBefore(err, el.nextSibling);
         }
         if (cond) {
           el.classList.remove('is-invalid');
@@ -282,10 +289,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           el.classList.add('is-invalid');
           err.textContent = msg;
         }
+        return cond;
       }
 
-      inputs.fname.addEventListener('input', function() { check(this, this.value.trim() !== '', 'Required'); });
-      inputs.lname.addEventListener('input', function() { check(this, this.value.trim() !== '', 'Required'); });
+      inputs.fname.addEventListener('input', function() { check(this, this.value.trim() !== '' && noNumbersRegex.test(this.value), 'Required. No numbers.'); });
+      inputs.mname.addEventListener('input', function() { if(this.value.trim() !== '') check(this, noNumbersRegex.test(this.value), 'No numbers allowed.'); else { this.classList.remove('is-invalid','is-valid'); } });
+      inputs.lname.addEventListener('input', function() { check(this, this.value.trim() !== '' && noNumbersRegex.test(this.value), 'Required. No numbers.'); });
       inputs.sid.addEventListener('input', function() { check(this, this.value.trim() !== '', 'Required'); });
 
       inputs.email.addEventListener('input', function() {
@@ -294,12 +303,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       });
 
       inputs.pass.addEventListener('input', function() {
-        check(this, this.value.length >= 8, 'Must be at least 8 characters');
+        const val = this.value;
+        let strMsg = '', strColor = '';
+
+        if (val.length === 0) {
+          passStrength.style.display = 'none';
+        } else {
+          passStrength.style.display = 'block';
+          if (val.length >= 8 && /[A-Z]/.test(val) && /[0-9]/.test(val) && /[^A-Za-z0-9]/.test(val)) {
+            strMsg = 'Strong'; strColor = 'green';
+          } else if (val.length >= 8 && /[A-Za-z]/.test(val) && /[0-9]/.test(val)) {
+            strMsg = 'Medium'; strColor = 'orange';
+          } else {
+            strMsg = 'Weak'; strColor = 'red';
+          }
+          passStrength.textContent = 'Strength: ' + strMsg;
+          passStrength.style.color = strColor;
+        }
+
+        check(this, val.length >= 8, 'Must be at least 8 characters');
         if(inputs.conf.value) inputs.conf.dispatchEvent(new Event('input'));
       });
 
       inputs.conf.addEventListener('input', function() {
-        check(this, this.value === inputs.pass.value, 'Passwords do not match');
+        check(this, this.value === inputs.pass.value && this.value !== '', 'Passwords do not match');
       });
 
       inputs.year.addEventListener('input', function() {
@@ -316,6 +343,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       inputs.sy.addEventListener('input', function() {
         if(!this.value) { this.classList.remove('is-invalid','is-valid'); return; }
         check(this, /^\d{4}-\d{4}$/.test(this.value.trim()), 'Format: YYYY-YYYY');
+      });
+
+      // Block submit if errors or empty required fields
+      f.addEventListener('submit', function(e) {
+        let isValid = true;
+        
+        // Force validate required
+        isValid &= check(inputs.fname, inputs.fname.value.trim() !== '' && noNumbersRegex.test(inputs.fname.value), 'Required. No numbers.');
+        isValid &= check(inputs.lname, inputs.lname.value.trim() !== '' && noNumbersRegex.test(inputs.lname.value), 'Required. No numbers.');
+        isValid &= check(inputs.sid, inputs.sid.value.trim() !== '', 'Required');
+        isValid &= check(inputs.email, /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputs.email.value.trim()), 'Enter valid email');
+        isValid &= check(inputs.pass, inputs.pass.value.length >= 8, 'Must be at least 8 chars');
+        isValid &= check(inputs.conf, inputs.conf.value === inputs.pass.value && inputs.conf.value !== '', 'Passwords do not match');
+
+        if(f.querySelectorAll('.is-invalid').length > 0 || !isValid) {
+          e.preventDefault();
+        }
       });
     });
   </script>
