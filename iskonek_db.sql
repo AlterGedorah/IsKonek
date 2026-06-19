@@ -156,6 +156,8 @@ CREATE TABLE `kanban_tasks` (
 
 --
 -- Table structure for table `managers`
+-- One row per section (UNIQUE on section_id) so each section has at most one manager.
+-- The managers.user_id is kept in sync with sections.manager_id.
 --
 
 CREATE TABLE `managers` (
@@ -164,6 +166,9 @@ CREATE TABLE `managers` (
   `user_id` int(11) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Migration: ensure the unique key exists on legacy databases
+-- ALTER TABLE `managers` ADD UNIQUE KEY `uniq_section` (`section_id`);
 
 -- --------------------------------------------------------
 

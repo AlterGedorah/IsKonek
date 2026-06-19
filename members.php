@@ -93,6 +93,66 @@ function initials(string $name): string
     $i .= strtoupper(substr(end($parts), 0, 1));
   return $i;
 }
+
+// --- Determine which sections the current user can pass managership for ---
+// Admins/sup_admins can pass for ANY section. Regular users can pass only
+// for the section they currently manage.
+$passable_sections = []; // [section_id => ['name'=>..., 'candidates'=>[ [id,name,...], ... ]]]
+
+if ($is_admin) {
+  $sec_q = $conn->query("SELECT id, name FROM sections ORDER BY name");
+  $all_secs = $sec_q ? $sec_q->fetch_all(MYSQLI_ASSOC) : [];
+  foreach ($all_secs as $sec) {
+    $sid = (int)$sec['id'];
+    $cand_q = $conn->prepare("
+            SELECT id, first_name, mid_name, last_name,
+                   CONCAT_WS(' ', first_name, mid_name, last_name) AS full_name,
+                   student_id, role
+            FROM users WHERE section_id = ?
+            ORDER BY (role = 'sup_admin') DESC, (role = 'admin') DESC, first_name
+        ");
+    $cand_q->bind_param("i", $sid);
+    $cand_q->execute();
+    $passable_sections[$sid] = [
+      'name' => $sec['name'],
+      'candidates' => $cand_q->get_result()->fetch_all(MYSQLI_ASSOC),
+    ];
+    $cand_q->close();
+  }
+} elseif (!empty($members_raw)) {
+  $my_managed_section_id = null;
+  foreach ($members_raw as $m) {
+    if ((int)$m['id'] === $current_user_id && (int)$m['is_manager'] === 1) {
+      $my_managed_section_id = (int)$m['section_db_id'];
+      break;
+    }
+  }
+  if ($my_managed_section_id) {
+    $sec_q = $conn->prepare("SELECT name FROM sections WHERE id = ?");
+    $sec_q->bind_param("i", $my_managed_section_id);
+    $sec_q->execute();
+    $sec_row = $sec_q->get_result()->fetch_assoc();
+    $sec_q->close();
+    if ($sec_row) {
+      $cand_q = $conn->prepare("
+                SELECT id, first_name, mid_name, last_name,
+                       CONCAT_WS(' ', first_name, mid_name, last_name) AS full_name,
+                       student_id, role
+                FROM users WHERE section_id = ? AND id <> ?
+                ORDER BY first_name
+            ");
+      $cand_q->bind_param("ii", $my_managed_section_id, $current_user_id);
+      $cand_q->execute();
+      $passable_sections[$my_managed_section_id] = [
+        'name' => $sec_row['name'],
+        'candidates' => $cand_q->get_result()->fetch_all(MYSQLI_ASSOC),
+      ];
+      $cand_q->close();
+    }
+  }
+}
+
+$passable_json = json_encode($passable_sections, JSON_HEX_APOS | JSON_HEX_QUOT);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -170,7 +230,12 @@ function initials(string $name): string
                 </div>
 
                 <?php foreach ($members as $member): ?>
-                  <?php $m_name = !empty(trim($member['full_name'])) ? $member['full_name'] : 'Student User'; ?>
+                  <?php
+                    $m_name = !empty(trim($member['full_name'])) ? $member['full_name'] : 'Student User';
+                    $can_pass = $member['is_manager']
+                      && isset($passable_sections[(int)$member['section_db_id']])
+                      && ( $is_admin || (int)$member['id'] === $current_user_id );
+                  ?>
                   <div class="member-row" data-name="<?= strtolower(htmlspecialchars($m_name)) ?>">
                     <div class="member-avatar" style="background:<?= avatarColor($m_name) ?>">
                       <?= initials($m_name) ?>
@@ -189,6 +254,13 @@ function initials(string $name): string
                         <?= htmlspecialchars($member['role'] ?? 'Student') ?>
                       </div>
                     </div>
+                    <?php if ($can_pass): ?>
+                      <button class="btn-pass-mgr"
+                              onclick="openPassModal(<?= (int)$member['section_db_id'] ?>, '<?= htmlspecialchars(addslashes($section_key)) ?>')"
+                              title="Pass your managership to another member">
+                        <i class="bi bi-arrow-left-right"></i> Pass Managership
+                      </button>
+                    <?php endif; ?>
                   </div>
                 <?php endforeach; ?>
               </div>
@@ -239,9 +311,65 @@ function initials(string $name): string
     </div>
   <?php endif; ?>
 
+  <style>
+    .btn-pass-mgr {
+      background: #fff7e6;
+      color: #b07000;
+      border: 1px solid #f0d9a8;
+      border-radius: 8px;
+      padding: 5px 10px;
+      font-size: 12px;
+      font-family: var(--font-heading);
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+    .btn-pass-mgr:hover { background: #ffeec2; color: #8a5800; }
+    .alert-error {
+      background: #fff0f0;
+      color: var(--accent-red, #d23c3c);
+      border: 1px solid #f3c2c2;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+    }
+  </style>
+
+  <!-- Pass Managership Modal -->
+  <div class="modal fade" id="passMgrModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-medium" style="font-family:var(--font-heading);">Pass Managership</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body pt-3">
+          <div id="passMgrError" class="alert-error mb-3" style="display:none;"></div>
+          <p class="text-muted small mb-3" id="passMgrIntro">
+            Hand off the manager role for <strong id="passMgrSection">this section</strong> to another member.
+            The chosen member will become the new section manager and you will lose that role.
+          </p>
+          <div class="mb-3">
+            <label class="form-label small fw-medium">Recipient (must be in the same section)</label>
+            <select id="passMgrRecipient" class="form-select" style="border-radius:10px;border-color:var(--border-color);">
+              <option value="">— Choose a member —</option>
+            </select>
+          </div>
+          <button class="btn-login w-100" id="confirmPassMgrBtn">Pass Managership</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    let addMemberModalObj = null;
+    const PASSABLE = <?= $passable_json ?? '{}' ?>;
+    let passMgrModalObj = null;
+    let activePassSectionId = null;
 
     document.addEventListener('DOMContentLoaded', function () {
       const toggleBtn = document.getElementById('sidebarToggle');
@@ -253,6 +381,9 @@ function initials(string $name): string
       <?php if ($is_admin): ?>
         addMemberModalObj = new bootstrap.Modal(document.getElementById('addMemberModal'));
       <?php endif; ?>
+
+      passMgrModalObj = new bootstrap.Modal(document.getElementById('passMgrModal'));
+      document.getElementById('confirmPassMgrBtn').addEventListener('click', submitPassManagership);
     });
 
     // Live search
@@ -305,6 +436,67 @@ function initials(string $name): string
           });
       }
     <?php endif; ?>
+
+    function openPassModal(sectionId, sectionName) {
+      activePassSectionId = sectionId;
+      document.getElementById('passMgrSection').textContent = sectionName || PASSABLE[sectionId]?.name || ('Section #' + sectionId);
+      const sel = document.getElementById('passMgrRecipient');
+      sel.innerHTML = '<option value="">— Choose a member —</option>';
+
+      const data = PASSABLE[sectionId];
+      if (data && Array.isArray(data.candidates)) {
+        data.candidates.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = (c.full_name || ('User #' + c.id)) +
+            (c.student_id ? ' · ' + c.student_id : '') +
+            (c.role ? ' · ' + c.role : '');
+          sel.appendChild(opt);
+        });
+      }
+
+      document.getElementById('passMgrError').style.display = 'none';
+      passMgrModalObj.show();
+    }
+
+    function submitPassManagership() {
+      const newUserId = parseInt(document.getElementById('passMgrRecipient').value || '0', 10);
+      const errEl = document.getElementById('passMgrError');
+      errEl.style.display = 'none';
+
+      if (!activePassSectionId) { errEl.textContent = 'No section selected.'; errEl.style.display = 'block'; return; }
+      if (!newUserId) { errEl.textContent = 'Please choose a recipient.'; errEl.style.display = 'block'; return; }
+
+      const fd = new FormData();
+      fd.append('action', 'pass_managership');
+      fd.append('section_id', activePassSectionId);
+      fd.append('new_user_id', newUserId);
+
+      const btn = document.getElementById('confirmPassMgrBtn');
+      const orig = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Passing…';
+
+      fetch('actions/manager_actions.php', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) {
+            passMgrModalObj.hide();
+            window.location.reload();
+          } else {
+            errEl.textContent = data.message || 'Something went wrong.';
+            errEl.style.display = 'block';
+          }
+        })
+        .catch(() => {
+          errEl.textContent = 'Network error. Please try again.';
+          errEl.style.display = 'block';
+        })
+        .finally(() => {
+          btn.disabled = false;
+          btn.textContent = orig;
+        });
+    }
   </script>
 </body>
 
