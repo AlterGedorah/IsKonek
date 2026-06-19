@@ -75,30 +75,24 @@ $current_page = basename($_SERVER['PHP_SELF']);
         <!-- ADMIN Section -->
         <p class="nav-section-label mt-3">ADMIN</p>
         <ul class="nav flex-column">
-            
+            <?php if (strtolower($_SESSION['role'] ?? '') === 'admin' || 'sup_admin'): ?>
 
-            <li class="nav-item">
-                <a href="manage_subjects.php"
-                    class="nav-link sidebar-link <?= $current_page === 'manage_subjects.php' ? 'active' : '' ?>">
-                    <i class="bi bi-journal-bookmark-fill me-2"></i>
-                    Manage Subjects
-                </a>
-            </li>
-            <?php if (strtolower($_SESSION['role'] ?? '') === 'admin'): ?>
                 <li class="nav-item">
-                    <a href="manage_users.php"
-                        class="nav-link sidebar-link <?= $current_page === 'manage_users.php' ? 'active' : '' ?>">
-                        <i class="bi bi-person-gear me-2"></i>
-                        Manage Users
+                    <a href="manage_subjects.php"
+                        class="nav-link sidebar-link <?= $current_page === 'manage_subjects.php' ? 'active' : '' ?>">
+                        <i class="bi bi-journal-bookmark-fill me-2"></i>
+                        Manage Subjects
                     </a>
                 </li>
+
+                
                 <li class="nav-item">
-                <a href="members.php"
-                    class="nav-link sidebar-link <?= $current_page === 'members.php' ? 'active' : '' ?>">
-                    <i class="bi bi-people-fill me-2"></i>
-                    Member Dictionary
-                </a>
-            </li>
+                    <a href="members.php"
+                        class="nav-link sidebar-link <?= $current_page === 'members.php' ? 'active' : '' ?>">
+                        <i class="bi bi-people-fill me-2"></i>
+                        Member Dictionary
+                    </a>
+                </li>
             <?php endif; ?>
             <?php if (strtolower($_SESSION['role'] ?? '') === 'sup_admin'): ?>
                 <li class="nav-item">
@@ -106,6 +100,13 @@ $current_page = basename($_SERVER['PHP_SELF']);
                         class="nav-link sidebar-link <?= $current_page === 'manage_sections.php' ? 'active' : '' ?>">
                         <i class="bi bi-diagram-3-fill me-2"></i>
                         Manage Sections
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="manage_users.php"
+                        class="nav-link sidebar-link <?= $current_page === 'manage_users.php' ? 'active' : '' ?>">
+                        <i class="bi bi-person-gear me-2"></i>
+                        Manage Users
                     </a>
                 </li>
             <?php endif; ?>
